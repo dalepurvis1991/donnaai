@@ -89,12 +89,22 @@ export async function setupAuth(app: Express) {
         profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=demo",
       });
 
-      // Set session
+      // Set session and force save
       (req.session as any).userId = demoUser.id;
       (req.session as any).user = demoUser;
       
       console.log('Demo user logged in:', demoUser);
-      res.redirect('/');
+      console.log('Session before save:', { userId: (req.session as any).userId });
+      
+      // Force session save before redirect
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.redirect('/?error=session_failed');
+        }
+        console.log('Session saved successfully');
+        res.redirect('/');
+      });
     } catch (error) {
       console.error('Login error:', error);
       res.redirect('/?error=login_failed');
