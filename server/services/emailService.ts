@@ -16,15 +16,29 @@ export class EmailService {
   private config: EmailServiceConfig;
 
   constructor() {
+    const email = process.env.GMAIL_EMAIL || '';
+    const password = process.env.GMAIL_APP_PASSWORD || '';
+    
+    // Clean up password - remove any spaces or extra characters
+    const cleanPassword = password.replace(/\s/g, '');
+    
     this.config = {
       host: 'imap.gmail.com',
       port: 993,
       secure: true,
       auth: {
-        user: process.env.GMAIL_EMAIL || '',
-        pass: process.env.GMAIL_APP_PASSWORD || '',
+        user: email.trim(),
+        pass: cleanPassword,
       },
     };
+    
+    // Debug logging (safe - doesn't log actual password)
+    console.log('Email config:', {
+      email: email ? `${email.substring(0, 3)}***${email.substring(email.length - 10)}` : 'NOT_SET',
+      passwordLength: cleanPassword.length,
+      hasEmail: !!email,
+      hasPassword: !!cleanPassword
+    });
   }
 
   async fetchRecentEmails(count: number = 10): Promise<InsertEmail[]> {
