@@ -3,8 +3,23 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { emailService } from "./services/emailService";
 import { insertEmailSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./googleAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up Replit authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
   // Demo mode toggle endpoint
   app.post("/api/demo/enable", (req, res) => {
     process.env.DEMO_MODE = 'true';

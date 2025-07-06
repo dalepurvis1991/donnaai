@@ -98,6 +98,9 @@ Baron is a modern email management and categorization application built with a R
 
 Changelog:
 - July 06, 2025. Initial setup
+- July 06, 2025. Implemented Replit OAuth authentication for simple Google login (no setup required)
+- July 06, 2025. Added user session management and authentication-based routing
+- July 06, 2025. Created landing page with one-click Google authentication via Replit
 
 ## User Preferences
 

@@ -1,6 +1,7 @@
-import { emails, type Email, type InsertEmail } from "@shared/schema";
+import { emails, users, type Email, type InsertEmail, type User, type UpsertUser } from "@shared/schema";
 
 export interface IStorage {
+  // Email operations
   getEmails(): Promise<Email[]>;
   getEmailsByCategory(category: string): Promise<Email[]>;
   createEmail(email: InsertEmail): Promise<Email>;
@@ -12,15 +13,21 @@ export interface IStorage {
     forwardCount: number;
     lastUpdated: string;
   }>;
+  
+  // User operations for Google OAuth
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
   private emails: Map<number, Email>;
+  private users: Map<string, User>;
   private currentId: number;
   private lastUpdated: Date;
 
   constructor() {
     this.emails = new Map();
+    this.users = new Map();
     this.currentId = 1;
     this.lastUpdated = new Date();
   }
@@ -67,6 +74,27 @@ export class MemStorage implements IStorage {
       forwardCount,
       lastUpdated: this.getTimeAgo(this.lastUpdated),
     };
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const user: User = {
+      id: userData.id,
+      email: userData.email ?? null,
+      firstName: userData.firstName ?? null,
+      lastName: userData.lastName ?? null,
+      profileImageUrl: userData.profileImageUrl ?? null,
+      googleAccessToken: userData.googleAccessToken ?? null,
+      googleRefreshToken: userData.googleRefreshToken ?? null,
+      createdAt: userData.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.users.set(user.id, user);
+    return user;
   }
 
   private getTimeAgo(date: Date): string {
