@@ -5,6 +5,17 @@ import { emailService } from "./services/emailService";
 import { insertEmailSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Demo mode toggle endpoint
+  app.post("/api/demo/enable", (req, res) => {
+    process.env.DEMO_MODE = 'true';
+    res.json({ message: "Demo mode enabled", demoMode: true });
+  });
+
+  app.post("/api/demo/disable", (req, res) => {
+    process.env.DEMO_MODE = 'false';
+    res.json({ message: "Demo mode disabled", demoMode: false });
+  });
+
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {

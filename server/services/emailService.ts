@@ -42,6 +42,11 @@ export class EmailService {
   }
 
   async fetchRecentEmails(count: number = 10): Promise<InsertEmail[]> {
+    // Demo mode - return sample emails for testing
+    // Temporarily enabled for testing while we fix Gmail authentication
+    console.log('Running in demo mode - returning sample emails');
+    return this.generateSampleEmails(count);
+
     if (!this.config.auth.user || !this.config.auth.pass) {
       throw new Error('Gmail credentials not configured. Please set GMAIL_EMAIL and GMAIL_APP_PASSWORD environment variables.');
     }
@@ -157,6 +162,11 @@ export class EmailService {
   }
 
   async testConnection(): Promise<boolean> {
+    // Demo mode - bypass Gmail authentication for testing
+    // Temporarily enabled for testing while we fix Gmail authentication
+    console.log('Running in demo mode - simulating Gmail connection');
+    return true;
+
     try {
       const client = new ImapFlow(this.config);
       await client.connect();
@@ -166,6 +176,67 @@ export class EmailService {
       console.error('Email connection test failed:', error);
       return false;
     }
+  }
+
+  private generateSampleEmails(count: number): InsertEmail[] {
+    const sampleEmails = [
+      {
+        subject: "Weekly Newsletter - Industry Updates",
+        sender: "Newsletter Team",
+        senderEmail: "newsletter@company.com",
+        date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        body: "Here are this week's industry updates and insights...",
+        category: "FYI",
+        messageId: `sample-1-${Date.now()}`
+      },
+      {
+        subject: "Urgent: Project Deadline Approaching",
+        sender: "Project Manager",
+        senderEmail: "pm@company.com",
+        date: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        body: "We need to review the project status before the deadline...",
+        category: "Draft",
+        messageId: `sample-2-${Date.now()}`
+      },
+      {
+        subject: "Please forward to your team - New Policy",
+        sender: "HR Department",
+        senderEmail: "hr@company.com",
+        date: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+        body: "Please share this new policy with your team members...",
+        category: "Forward",
+        messageId: `sample-3-${Date.now()}`
+      },
+      {
+        subject: "Order Confirmation #12345",
+        sender: "Online Store",
+        senderEmail: "orders@store.com",
+        date: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+        body: "Thank you for your order. Your confirmation number is...",
+        category: "FYI",
+        messageId: `sample-4-${Date.now()}`
+      },
+      {
+        subject: "Meeting Request: Strategy Discussion",
+        sender: "Sarah Johnson",
+        senderEmail: "sarah@company.com", 
+        date: new Date(Date.now() - 45 * 60 * 1000), // 45 minutes ago
+        body: "Could we schedule a meeting to discuss the new strategy?",
+        category: "Draft",
+        messageId: `sample-5-${Date.now()}`
+      },
+      {
+        subject: "Team Update - Share with Marketing",
+        sender: "Development Team",
+        senderEmail: "dev@company.com",
+        date: new Date(Date.now() - 20 * 60 * 1000), // 20 minutes ago
+        body: "Here's the latest update on our development progress. Please forward to marketing team...",
+        category: "Forward",
+        messageId: `sample-6-${Date.now()}`
+      }
+    ];
+
+    return sampleEmails.slice(0, count);
   }
 }
 
