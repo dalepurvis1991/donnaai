@@ -77,14 +77,12 @@ export function setupGoogleAuth(app: Express) {
   });
 
   // Check Google connection status
-  app.get('/api/auth/google/status', async (req: any, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
+  app.get('/api/auth/google/status', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
+      console.log('Google status check for user:', userId, 'has token:', !!(user?.googleAccessToken));
       
       res.json({
         connected: !!(user?.googleAccessToken),
@@ -92,6 +90,7 @@ export function setupGoogleAuth(app: Express) {
         hasCalendar: !!(user?.googleAccessToken),
       });
     } catch (error) {
+      console.error('Error checking Google status:', error);
       res.status(500).json({ message: 'Failed to check Google status' });
     }
   });

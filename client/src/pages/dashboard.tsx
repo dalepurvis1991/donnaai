@@ -14,14 +14,18 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   // Check Google connection status
-  const { data: googleStatus, isLoading: googleStatusLoading } = useQuery<{ 
+  const { data: googleStatus, isLoading: googleStatusLoading, error: googleStatusError } = useQuery<{ 
     connected: boolean; 
     hasGmail: boolean; 
     hasCalendar: boolean; 
   }>({
     queryKey: ["/api/auth/google/status"],
     refetchInterval: 30000,
+    retry: false,
   });
+
+  // Debug logging
+  console.log('Google status:', googleStatus, 'Loading:', googleStatusLoading, 'Error:', googleStatusError);
 
   // Fetch email statistics (only if Google connected)
   const { data: stats, isLoading: statsLoading } = useQuery<EmailStats>({
@@ -77,7 +81,7 @@ export default function Dashboard() {
   };
 
   // Show Google connection screen if not connected
-  if (!googleStatusLoading && !googleStatus?.connected) {
+  if (!googleStatusLoading && googleStatus && !googleStatus.connected) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Header 
