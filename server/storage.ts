@@ -1,4 +1,4 @@
-import { emails, users, type Email, type InsertEmail, type User, type UpsertUser } from "@shared/schema";
+import { emails, calendarEvents, users, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -15,6 +15,11 @@ export interface IStorage {
     forwardCount: number;
     lastUpdated: string;
   }>;
+  
+  // Calendar operations
+  getCalendarEvents(userId: string): Promise<CalendarEvent[]>;
+  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  clearCalendarEvents(userId: string): Promise<void>;
   
   // User operations for Google OAuth
   getUser(id: string): Promise<User | undefined>;
@@ -164,6 +169,31 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Calendar operations
+  async getCalendarEvents(userId: string): Promise<CalendarEvent[]> {
+    return await db
+      .select()
+      .from(calendarEvents)
+      .where(eq(calendarEvents.userId, userId))
+      .orderBy(calendarEvents.startDateTime);
+  }
+
+  async createCalendarEvent(eventData: InsertCalendarEvent): Promise<CalendarEvent> {
+    const [event] = await db
+      .insert(calendarEvents)
+      .values(eventData)
+      .onConflictDoUpdate({
+        target: calendarEvents.id,
+        set: eventData,
+      })
+      .returning();
+    return event;
+  }
+
+  async clearCalendarEvents(userId: string): Promise<void> {
+    await db.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
   }
 }
 

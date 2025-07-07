@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { gmailApiService } from "./services/gmailApiService";
-import { insertEmailSchema } from "@shared/schema";
+import { calendarApiService } from "./services/calendarApiService";
+import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -17,6 +18,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      // Auto-fetch emails and calendar events for new users or if no data exists
+      if (user.googleAccessToken) {
+        const stats = await storage.getEmailStats();
+        if (stats.totalEmails === 0) {
+          try {
+            // Fetch emails
+            const newEmails = await gmailApiService.fetchUserEmails(user, 50);
+            for (const email of newEmails) {
+              await storage.createEmail(email);
+            }
+            
+            // Fetch calendar events for next 7 days
+            const newEvents = await calendarApiService.fetchUserEvents(user, 7);
+            for (const event of newEvents) {
+              await storage.createCalendarEvent(event);
+            }
+          } catch (error) {
+            console.error('Auto-fetch data failed:', error);
+            // Don't fail user login if data fetch fails
+          }
+        }
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -37,10 +62,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const isConnected = await gmailApiService.testConnection(user);
+      const emailConnected = await gmailApiService.testConnection(user);
+      const calendarConnected = await calendarApiService.testConnection(user);
       res.json({ 
         status: "ok", 
-        emailConnection: isConnected ? "connected" : "disconnected" 
+        emailConnection: emailConnected ? "connected" : "disconnected",
+        calendarConnection: calendarConnected ? "connected" : "disconnected"
       });
     } catch (error) {
       res.status(500).json({ 
@@ -111,7 +138,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.clearEmails();
       
       // Fetch new emails from Gmail API
-      const newEmails = await gmailApiService.fetchUserEmails(user, 10);
+      const emailCount = req.body?.count || 50; // Default 50, allow user preference
+      const newEmails = await gmailApiService.fetchUserEmails(user, emailCount);
       
       // Store new emails
       for (const email of newEmails) {
@@ -141,6 +169,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Failed to get emails" 
+      });
+    }
+  });
+
+  // Calendar routes
+  app.get("/api/calendar/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const events = await storage.getCalendarEvents(userId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to fetch calendar events" 
+      });
+    }
+  });
+
+  app.post("/api/calendar/refresh", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.googleAccessToken) {
+        return res.status(400).json({ 
+          message: "Calendar access not granted. Please log in again to grant calendar permission." 
+        });
+      }
+
+      // Clear existing events
+      await storage.clearCalendarEvents(userId);
+      
+      // Fetch new calendar events
+      const daysAhead = req.body?.daysAhead || 7;
+      const newEvents = await calendarApiService.fetchUserEvents(user, daysAhead);
+      
+      // Store new events
+      for (const event of newEvents) {
+        await storage.createCalendarEvent(event);
+      }
+
+      res.json({ 
+        message: "Calendar events refreshed successfully", 
+        count: newEvents.length 
+      });
+    } catch (error) {
+      console.error('Calendar refresh error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to refresh calendar events" 
       });
     }
   });

@@ -9,7 +9,11 @@ export class GmailApiService {
 
     try {
       // Set up OAuth2 client with user's tokens
-      const oauth2Client = new google.auth.OAuth2();
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        'https://developers.google.com/oauthplayground'
+      );
       oauth2Client.setCredentials({
         access_token: user.googleAccessToken,
         refresh_token: user.googleRefreshToken,

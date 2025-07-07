@@ -111,6 +111,9 @@ Changelog:
 - July 07, 2025. Implemented Google OAuth 2.0 with Gmail read permissions for secure email access
 - July 07, 2025. Updated authentication flow to include Gmail scope in Replit OAuth
 - July 07, 2025. Now stores Google access/refresh tokens in user database for API calls
+- July 07, 2025. **NEW FEATURE**: Added Google Calendar integration with automatic event fetching
+- July 07, 2025. Calendar events are categorized and stored alongside emails for complete productivity management
+- July 07, 2025. Auto-fetches calendar events for next 7 days on first login, with refresh capability
 
 ## User Preferences
 

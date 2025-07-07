@@ -93,7 +93,7 @@ export async function setupAuth(app: Express) {
       {
         name: `replitauth:${domain}`,
         config,
-        scope: "openid email profile offline_access https://www.googleapis.com/auth/gmail.readonly",
+        scope: "openid email profile offline_access https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
         callbackURL: `https://${domain}/api/callback`,
       },
       verify,
@@ -107,7 +107,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access", "https://www.googleapis.com/auth/gmail.readonly"],
+      scope: ["openid", "email", "profile", "offline_access", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/calendar.readonly"],
     })(req, res, next);
   });
 
