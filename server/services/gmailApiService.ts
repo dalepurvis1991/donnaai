@@ -1,114 +1,113 @@
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import type { InsertEmail, User } from '@shared/schema';
 
 export class GmailApiService {
-  private oauth2Client: OAuth2Client;
-
-  constructor() {
-    this.oauth2Client = new OAuth2Client(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.REDIRECT_URI || 'http://localhost:5000/auth/callback'
-    );
-  }
-
   async fetchUserEmails(user: User, count: number = 10): Promise<InsertEmail[]> {
     if (!user.googleAccessToken) {
-      throw new Error('User does not have Google access token');
+      throw new Error('User has no Google access token');
     }
 
-    // Set the user's credentials
-    this.oauth2Client.setCredentials({
-      access_token: user.googleAccessToken,
-      refresh_token: user.googleRefreshToken,
-    });
-
-    const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-
     try {
-      // Get list of recent messages
-      const listResponse = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: count,
-        q: 'in:inbox',
+      // Set up OAuth2 client with user's tokens
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({
+        access_token: user.googleAccessToken,
+        refresh_token: user.googleRefreshToken,
       });
 
-      const messages = listResponse.data.messages || [];
+      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+      // Get list of recent emails
+      const response = await gmail.users.messages.list({
+        userId: 'me',
+        maxResults: count,
+        q: 'in:inbox', // Only inbox emails
+      });
+
+      const messages = response.data.messages || [];
       const emails: InsertEmail[] = [];
 
-      // Fetch details for each message
+      // Fetch details for each email
       for (const message of messages) {
         if (!message.id) continue;
 
         try {
-          const messageDetails = await gmail.users.messages.get({
+          const emailDetail = await gmail.users.messages.get({
             userId: 'me',
             id: message.id,
             format: 'full',
           });
 
-          const email = this.parseGmailMessage(messageDetails.data);
+          const email = this.parseGmailMessage(emailDetail.data);
           if (email) {
             emails.push(email);
           }
         } catch (error) {
-          console.error(`Error fetching message ${message.id}:`, error);
+          console.error(`Failed to fetch email ${message.id}:`, error);
           continue;
         }
       }
 
       return emails;
-    } catch (error) {
-      console.error('Error fetching emails from Gmail API:', error);
-      
-      // If token is expired, try to refresh
-      if (error instanceof Error && error.message.includes('401')) {
-        throw new Error('Authentication token expired. Please log in again.');
+    } catch (error: any) {
+      console.error('Gmail API error:', error);
+      if (error.code === 401) {
+        throw new Error('Gmail access token expired. Please re-authenticate.');
       }
-      
-      throw error;
+      throw new Error(`Failed to fetch emails: ${error.message}`);
     }
   }
 
   private parseGmailMessage(message: any): InsertEmail | null {
-    const headers = message.payload?.headers || [];
-    const subject = this.findHeader(headers, 'Subject') || 'No Subject';
-    const from = this.findHeader(headers, 'From') || 'Unknown Sender';
-    const date = this.findHeader(headers, 'Date') || new Date().toISOString();
-    const messageId = this.findHeader(headers, 'Message-ID') || `gmail-${message.id}`;
+    try {
+      const headers = message.payload?.headers || [];
+      
+      const subject = this.findHeader(headers, 'Subject') || 'No Subject';
+      const from = this.findHeader(headers, 'From') || 'Unknown Sender';
+      const date = this.findHeader(headers, 'Date') || new Date().toISOString();
+      const messageId = this.findHeader(headers, 'Message-ID') || `gmail-${message.id}`;
 
-    // Parse sender name and email
-    const senderMatch = from.match(/^(.*?)\s*<(.+?)>$/) || from.match(/^(.+)$/);
-    const senderName = senderMatch ? senderMatch[1]?.trim() || senderMatch[0]?.trim() : 'Unknown';
-    const senderEmail = senderMatch && senderMatch[2] ? senderMatch[2].trim() : from;
-
-    // Extract body text
-    let body = '';
-    if (message.payload?.body?.data) {
-      body = Buffer.from(message.payload.body.data, 'base64').toString();
-    } else if (message.payload?.parts) {
-      // Try to find text/plain part
-      const textPart = message.payload.parts.find((part: any) => 
-        part.mimeType === 'text/plain'
-      );
-      if (textPart?.body?.data) {
-        body = Buffer.from(textPart.body.data, 'base64').toString();
+      // Extract sender name and email
+      let sender = from;
+      let senderEmail = from;
+      
+      const emailMatch = from.match(/<(.+?)>/);
+      if (emailMatch) {
+        senderEmail = emailMatch[1];
+        sender = from.replace(/<.+?>/, '').trim().replace(/['"]/g, '');
+      } else if (from.includes('@')) {
+        senderEmail = from;
+        sender = from.split('@')[0];
       }
+
+      // Get email body
+      let body = '';
+      if (message.payload?.parts) {
+        for (const part of message.payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            body += Buffer.from(part.body.data, 'base64').toString();
+          }
+        }
+      } else if (message.payload?.body?.data) {
+        body = Buffer.from(message.payload.body.data, 'base64').toString();
+      }
+
+      // Categorize the email
+      const category = this.categorizeEmail(subject, body, sender);
+
+      return {
+        subject,
+        sender,
+        senderEmail,
+        date: new Date(date),
+        body: body.substring(0, 1000), // Limit body size
+        category,
+        messageId,
+      };
+    } catch (error) {
+      console.error('Error parsing Gmail message:', error);
+      return null;
     }
-
-    // Categorize email based on subject and content
-    const category = this.categorizeEmail(subject, body, senderName);
-
-    return {
-      subject,
-      sender: senderName,
-      senderEmail,
-      date: new Date(date),
-      body: body.substring(0, 1000), // Limit body length
-      category,
-      messageId,
-    };
   }
 
   private findHeader(headers: any[], name: string): string | undefined {
@@ -117,40 +116,42 @@ export class GmailApiService {
   }
 
   private categorizeEmail(subject: string, body: string, sender: string): string {
-    const subjectLower = subject.toLowerCase();
-    const bodyLower = body.toLowerCase();
-    const senderLower = sender.toLowerCase();
+    const content = `${subject} ${body} ${sender}`.toLowerCase();
 
-    // Draft category - emails requiring action
-    if (
-      subjectLower.includes('urgent') ||
-      subjectLower.includes('action required') ||
-      subjectLower.includes('deadline') ||
-      subjectLower.includes('please review') ||
-      subjectLower.includes('meeting request') ||
-      subjectLower.includes('approval') ||
-      bodyLower.includes('please respond') ||
-      bodyLower.includes('by tomorrow') ||
-      bodyLower.includes('asap')
-    ) {
-      return 'Draft';
-    }
+    // Keywords for each category
+    const fyiKeywords = [
+      'newsletter', 'update', 'announcement', 'info', 'fyi', 'notification',
+      'summary', 'report', 'news', 'weekly', 'monthly', 'digest'
+    ];
 
-    // Forward category - emails to share
-    if (
-      subjectLower.includes('fwd:') ||
-      subjectLower.includes('forward') ||
-      subjectLower.includes('share with') ||
-      subjectLower.includes('team update') ||
-      subjectLower.includes('announcement') ||
-      bodyLower.includes('please forward') ||
-      bodyLower.includes('share this')
-    ) {
+    const draftKeywords = [
+      'urgent', 'asap', 'deadline', 'action required', 'please review',
+      'need', 'request', 'approve', 'confirm', 'respond', 'reply',
+      'meeting', 'call', 'schedule', 'task', 'todo'
+    ];
+
+    const forwardKeywords = [
+      'team', 'share', 'forward', 'cc:', 'bcc:', 'distribute',
+      'please share', 'fwd:', 're:', 'all team', 'everyone'
+    ];
+
+    // Check for Forward first (might contain team mentions)
+    if (forwardKeywords.some(keyword => content.includes(keyword))) {
       return 'Forward';
     }
 
-    // FYI category - informational emails (default)
-    return 'FYI';
+    // Check for Draft (action required)
+    if (draftKeywords.some(keyword => content.includes(keyword))) {
+      return 'Draft';
+    }
+
+    // Check for FYI (informational)
+    if (fyiKeywords.some(keyword => content.includes(keyword))) {
+      return 'FYI';
+    }
+
+    // Default to Draft for emails that don't match clear patterns
+    return 'Draft';
   }
 
   async testConnection(user: User): Promise<boolean> {
@@ -159,16 +160,19 @@ export class GmailApiService {
     }
 
     try {
-      this.oauth2Client.setCredentials({
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({
         access_token: user.googleAccessToken,
         refresh_token: user.googleRefreshToken,
       });
 
-      const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      
+      // Test by getting user profile
       await gmail.users.getProfile({ userId: 'me' });
       return true;
     } catch (error) {
-      console.error('Gmail connection test failed:', error);
+      console.error('Gmail API connection test failed:', error);
       return false;
     }
   }

@@ -35,11 +35,12 @@ Baron is a modern email management and categorization application built with a R
 - **Storage**: Dual storage approach with in-memory fallback and PostgreSQL primary storage
 
 ### Email Service
-- **Provider**: Gmail integration via IMAP
-- **Protocol**: Secure IMAP connection (port 993)
-- **Authentication**: App-specific passwords for Gmail accounts
-- **Processing**: Automatic email parsing and categorization
-- **Real-time Updates**: Periodic fetching with connection monitoring
+- **Provider**: Gmail integration via Gmail API (OAuth 2.0)
+- **Protocol**: RESTful Gmail API calls
+- **Authentication**: Google OAuth tokens obtained during login flow
+- **Processing**: Automatic email parsing and categorization using Gmail API
+- **Real-time Updates**: On-demand fetching with user-triggered refresh
+- **Security**: Compliant with Google's January 2025 security requirements
 
 ### API Layer
 - **Health Monitoring**: Connection status tracking for email services
@@ -106,6 +107,10 @@ Changelog:
 - July 07, 2025. Connected real Gmail IMAP for email fetching and categorization
 - July 07, 2025. Removed demo mode - now using authentic email data only
 - July 07, 2025. Ready for live deployment with Replit OAuth authentication
+- July 07, 2025. **MAJOR UPDATE**: Migrated from IMAP to Gmail API due to Google's January 2025 security changes
+- July 07, 2025. Implemented Google OAuth 2.0 with Gmail read permissions for secure email access
+- July 07, 2025. Updated authentication flow to include Gmail scope in Replit OAuth
+- July 07, 2025. Now stores Google access/refresh tokens in user database for API calls
 
 ## User Preferences
 

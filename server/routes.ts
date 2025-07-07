@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { emailService } from "./services/emailService";
+import { gmailApiService } from "./services/gmailApiService";
 import { insertEmailSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
@@ -26,9 +26,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Health check endpoint
-  app.get("/api/health", async (req, res) => {
+  app.get("/api/health", isAuthenticated, async (req: any, res) => {
     try {
-      const isConnected = await emailService.testConnection();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.json({ 
+          status: "ok", 
+          emailConnection: "no_user" 
+        });
+      }
+      
+      const isConnected = await gmailApiService.testConnection(user);
       res.json({ 
         status: "ok", 
         emailConnection: isConnected ? "connected" : "disconnected" 
@@ -83,13 +92,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Refresh emails from Gmail
-  app.post("/api/emails/refresh", async (req, res) => {
+  app.post("/api/emails/refresh", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.googleAccessToken) {
+        return res.status(400).json({ 
+          message: "Gmail access not granted. Please log in again to grant Gmail permission." 
+        });
+      }
+
       // Clear existing emails
       await storage.clearEmails();
       
-      // Fetch new emails from Gmail
-      const newEmails = await emailService.fetchRecentEmails(10);
+      // Fetch new emails from Gmail API
+      const newEmails = await gmailApiService.fetchUserEmails(user, 10);
       
       // Store new emails
       for (const email of newEmails) {
@@ -104,6 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stats 
       });
     } catch (error) {
+      console.error('Email refresh error:', error);
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Failed to refresh emails" 
       });

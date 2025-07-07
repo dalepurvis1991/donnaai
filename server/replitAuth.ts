@@ -56,6 +56,7 @@ function updateUserSession(
 
 async function upsertUser(
   claims: any,
+  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
   await storage.upsertUser({
     id: claims["sub"],
@@ -63,6 +64,8 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    googleAccessToken: tokens.access_token,
+    googleRefreshToken: tokens.refresh_token,
   });
 }
 
@@ -80,7 +83,7 @@ export async function setupAuth(app: Express) {
   ) => {
     const user = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    await upsertUser(tokens.claims(), tokens);
     verified(null, user);
   };
 
@@ -90,7 +93,7 @@ export async function setupAuth(app: Express) {
       {
         name: `replitauth:${domain}`,
         config,
-        scope: "openid email profile offline_access",
+        scope: "openid email profile offline_access https://www.googleapis.com/auth/gmail.readonly",
         callbackURL: `https://${domain}/api/callback`,
       },
       verify,
@@ -104,7 +107,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
+      scope: ["openid", "email", "profile", "offline_access", "https://www.googleapis.com/auth/gmail.readonly"],
     })(req, res, next);
   });
 
