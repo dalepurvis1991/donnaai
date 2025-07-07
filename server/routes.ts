@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { emailService } from "./services/emailService";
 import { insertEmailSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./googleAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit authentication
@@ -23,16 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
-  // Demo mode toggle endpoint
-  app.post("/api/demo/enable", (req, res) => {
-    process.env.DEMO_MODE = 'true';
-    res.json({ message: "Demo mode enabled", demoMode: true });
-  });
 
-  app.post("/api/demo/disable", (req, res) => {
-    process.env.DEMO_MODE = 'false';
-    res.json({ message: "Demo mode disabled", demoMode: false });
-  });
 
   // Health check endpoint
   app.get("/api/health", async (req, res) => {

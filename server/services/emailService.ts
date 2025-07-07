@@ -42,11 +42,6 @@ export class EmailService {
   }
 
   async fetchRecentEmails(count: number = 10): Promise<InsertEmail[]> {
-    // Demo mode - return sample emails for testing
-    // Temporarily enabled for testing while we fix Gmail authentication
-    console.log('Running in demo mode - returning sample emails');
-    return this.generateSampleEmails(count);
-
     if (!this.config.auth.user || !this.config.auth.pass) {
       throw new Error('Gmail credentials not configured. Please set GMAIL_EMAIL and GMAIL_APP_PASSWORD environment variables.');
     }

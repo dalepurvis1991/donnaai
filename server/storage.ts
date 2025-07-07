@@ -1,4 +1,6 @@
 import { emails, users, type Email, type InsertEmail, type User, type UpsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Email operations
@@ -109,4 +111,60 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getEmails(): Promise<Email[]> {
+    return await db.select().from(emails).orderBy(emails.date);
+  }
+
+  async getEmailsByCategory(category: string): Promise<Email[]> {
+    return await db.select().from(emails)
+      .where(eq(emails.category, category))
+      .orderBy(emails.date);
+  }
+
+  async createEmail(insertEmail: InsertEmail): Promise<Email> {
+    const [email] = await db.insert(emails).values(insertEmail).returning();
+    return email;
+  }
+
+  async clearEmails(): Promise<void> {
+    await db.delete(emails);
+  }
+
+  async getEmailStats() {
+    const allEmails = await this.getEmails();
+    const fyiCount = allEmails.filter(email => email.category === 'FYI').length;
+    const draftCount = allEmails.filter(email => email.category === 'Draft').length;
+    const forwardCount = allEmails.filter(email => email.category === 'Forward').length;
+    
+    return {
+      totalEmails: allEmails.length,
+      fyiCount,
+      draftCount,
+      forwardCount,
+      lastUpdated: new Date().toISOString(),
+    };
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+}
+
+export const storage = new DatabaseStorage();
