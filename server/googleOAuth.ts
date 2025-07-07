@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import type { Express } from 'express';
 import { storage } from './storage';
+import { isAuthenticated } from './replitAuth';
 
 // Get the current domain for redirect URI
 const getRedirectUri = (req: any) => {
