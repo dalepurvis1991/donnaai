@@ -157,18 +157,32 @@ export class EmailService {
   }
 
   async testConnection(): Promise<boolean> {
-    // Demo mode - bypass Gmail authentication for testing
-    // Temporarily enabled for testing while we fix Gmail authentication
-    console.log('Running in demo mode - simulating Gmail connection');
-    return true;
+    if (!this.config.auth.user || !this.config.auth.pass) {
+      console.log('Gmail credentials not configured');
+      return false;
+    }
 
     try {
+      console.log('Testing Gmail connection...');
       const client = new ImapFlow(this.config);
       await client.connect();
+      console.log('Gmail connection successful!');
       await client.logout();
       return true;
-    } catch (error) {
-      console.error('Email connection test failed:', error);
+    } catch (error: any) {
+      console.error('Gmail connection failed:', {
+        message: error.message,
+        code: error.code,
+        authFailed: error.authenticationFailed
+      });
+      
+      if (error.authenticationFailed) {
+        console.error('Gmail authentication failed. Please check:');
+        console.error('1. Gmail account has 2-factor authentication enabled');
+        console.error('2. App password is generated correctly');
+        console.error('3. Account allows IMAP access');
+      }
+      
       return false;
     }
   }
