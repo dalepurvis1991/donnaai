@@ -5,27 +5,47 @@ import Header from "@/components/Header";
 import StatsOverview from "@/components/StatsOverview";
 import EmailColumn from "@/components/EmailColumn";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mail, Calendar, ArrowRight } from "lucide-react";
 import type { EmailStats, CategorizedEmails } from "@shared/schema";
 
 export default function Dashboard() {
   const { toast } = useToast();
 
-  // Fetch email statistics
+  // Check Google connection status
+  const { data: googleStatus, isLoading: googleStatusLoading } = useQuery<{ 
+    connected: boolean; 
+    hasGmail: boolean; 
+    hasCalendar: boolean; 
+  }>({
+    queryKey: ["/api/auth/google/status"],
+    refetchInterval: 30000,
+  });
+
+  // Fetch email statistics (only if Google connected)
   const { data: stats, isLoading: statsLoading } = useQuery<EmailStats>({
     queryKey: ["/api/emails/stats"],
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 60000,
+    enabled: googleStatus?.connected === true,
   });
 
-  // Fetch categorized emails
+  // Fetch categorized emails (only if Google connected)
   const { data: emails, isLoading: emailsLoading } = useQuery<CategorizedEmails>({
     queryKey: ["/api/emails/categorized"],
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 60000,
+    enabled: googleStatus?.connected === true,
   });
 
-  // Check connection status
-  const { data: healthCheck } = useQuery<{ status: string; emailConnection: string }>({
+  // Check health status (only if Google connected)
+  const { data: healthCheck } = useQuery<{ 
+    status: string; 
+    emailConnection: string; 
+    calendarConnection: string; 
+  }>({
     queryKey: ["/api/health"],
-    refetchInterval: 30000, // Check every 30 seconds
+    refetchInterval: 30000,
+    enabled: googleStatus?.connected === true,
   });
 
   // Refresh emails mutation
@@ -56,8 +76,68 @@ export default function Dashboard() {
     refreshMutation.mutate();
   };
 
+  // Show Google connection screen if not connected
+  if (!googleStatusLoading && !googleStatus?.connected) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Header 
+          connectionStatus="disconnected"
+          onRefresh={() => {}}
+          isRefreshing={false}
+        />
+        
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-2xl mx-auto">
+            <Card className="text-center">
+              <CardHeader>
+                <CardTitle className="text-2xl mb-2">Connect Your Google Account</CardTitle>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Grant access to Gmail and Calendar to start managing your productivity
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col items-center p-4 border rounded-lg">
+                    <Mail className="h-8 w-8 text-blue-500 mb-2" />
+                    <h3 className="font-semibold">Gmail Access</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+                      Read and categorize your emails
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center p-4 border rounded-lg">
+                    <Calendar className="h-8 w-8 text-green-500 mb-2" />
+                    <h3 className="font-semibold">Calendar Access</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+                      View your upcoming events
+                    </p>
+                  </div>
+                </div>
+                
+                <Button 
+                  size="lg" 
+                  className="w-full max-w-md"
+                  onClick={() => window.location.href = '/api/auth/google'}
+                >
+                  Connect Google Services
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                
+                <p className="text-xs text-gray-500">
+                  You'll be redirected to Google to grant permissions
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const isLoading = statsLoading || emailsLoading || refreshMutation.isPending;
-  const connectionStatus = healthCheck?.emailConnection === "connected" ? "connected" : "disconnected";
+  const connectionStatus = 
+    healthCheck?.emailConnection === "connected" && 
+    healthCheck?.calendarConnection === "connected" 
+      ? "connected" : "disconnected";
 
   return (
     <div className="min-h-screen bg-slate-50">

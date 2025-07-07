@@ -114,6 +114,10 @@ Changelog:
 - July 07, 2025. **NEW FEATURE**: Added Google Calendar integration with automatic event fetching
 - July 07, 2025. Calendar events are categorized and stored alongside emails for complete productivity management
 - July 07, 2025. Auto-fetches calendar events for next 7 days on first login, with refresh capability
+- July 07, 2025. **ARCHITECTURE CHANGE**: Implemented centralized OAuth system for scalability
+- July 07, 2025. Two-step authentication: Users log in with Replit, then connect Google services via app's OAuth
+- July 07, 2025. Only app developer needs to set up Google OAuth credentials once, not individual users
+- July 07, 2025. Ready for future third-party integrations (Slack, Microsoft, Notion, etc.) with same pattern
 
 ## User Preferences
 

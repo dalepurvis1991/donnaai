@@ -5,10 +5,14 @@ import { gmailApiService } from "./services/gmailApiService";
 import { calendarApiService } from "./services/calendarApiService";
 import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupGoogleAuth } from "./googleOAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit authentication
   await setupAuth(app);
+  
+  // Set up Google OAuth for Gmail/Calendar access
+  setupGoogleAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -19,28 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Auto-fetch emails and calendar events for new users or if no data exists
-      if (user.googleAccessToken) {
-        const stats = await storage.getEmailStats();
-        if (stats.totalEmails === 0) {
-          try {
-            // Fetch emails
-            const newEmails = await gmailApiService.fetchUserEmails(user, 50);
-            for (const email of newEmails) {
-              await storage.createEmail(email);
-            }
-            
-            // Fetch calendar events for next 7 days
-            const newEvents = await calendarApiService.fetchUserEvents(user, 7);
-            for (const event of newEvents) {
-              await storage.createCalendarEvent(event);
-            }
-          } catch (error) {
-            console.error('Auto-fetch data failed:', error);
-            // Don't fail user login if data fetch fails
-          }
-        }
-      }
+      // Don't auto-fetch on user endpoint - let frontend handle Google connection flow
       
       res.json(user);
     } catch (error) {
