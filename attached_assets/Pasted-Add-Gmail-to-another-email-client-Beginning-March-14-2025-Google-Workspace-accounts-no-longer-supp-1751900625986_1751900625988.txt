@@ -1,0 +1,27 @@
+Add Gmail to another email client
+Beginning March 14, 2025, Google Workspace accounts no longer support:
+Less secure apps
+Google Sync
+Apps or devices that ask you to sign in to your Google Account with your username and password only
+To continue to use a specific app with your Google Account, you need to sign in using a more secure type of access called OAuth. OAuth allows apps to access accounts with a digital key instead of requiring a user to enter their username and password. An example of a secure sign-in method is Sign in with Google.
+If your account is managed by your work or school, ask your administrator if you can use third-party apps with your Google Account. Learn how to transition from less secure apps to OAuth.
+For the exact transition dates, go to Google Workspace Updates.
+You can add Gmail to other email clients, like Microsoft Outlook, Apple Mail, or Mozilla Thunderbird. When you add Gmail, your messages and labels are synced with the email client.
+
+Changes to Gmail syncing with other email clients
+To keep your account more secure, Gmail no longer supports third-party apps or devices which require you to share your Google username and password. Sharing your account credentials with third-parties makes it easier for hackers to gain access to your account.
+
+Instead, look for the option to "Sign in with Google," which is a safer way to sync your mail to other apps. Learn about Sign in with Google.
+
+Gmail users with a personal Google Account
+Starting January 2025, the option to choose “Enable IMAP” or “Disable IMAP” won't be available. IMAP access is always turned on in Gmail, and your current connections to other email clients aren’t affected. You don’t need to take any action.
+
+Google Workspace accounts
+If you're using an email client that accesses your Google Account with only a username and password, upgrade to the latest version of your existing email client, use Sign in with Google, or set up your client to use IMAP with OAuth before March 14, 2025. Learn more about the change in Google Workspace Updates.
+
+Set up Gmail in another email client
+To add Gmail to another email client:
+
+On your device, open the client.
+Look for an option to "Sign in with Google."
+If you need help setting up Gmail in the email client, reach out to the developer.
