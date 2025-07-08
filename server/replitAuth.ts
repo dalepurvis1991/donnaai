@@ -136,7 +136,15 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    console.log(`Callback request from: ${req.hostname}`);
+    const strategyName = `replitauth:${req.hostname}`;
+    
+    if (!passport._strategies[strategyName]) {
+      console.error(`Callback: Strategy ${strategyName} not found`);
+      return res.redirect("/api/login");
+    }
+    
+    passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);

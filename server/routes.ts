@@ -8,6 +8,12 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupGoogleAuth } from "./googleOAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add debug logging for all requests
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url} from ${req.hostname}`);
+    next();
+  });
+  
   // Set up Replit authentication
   await setupAuth(app);
   

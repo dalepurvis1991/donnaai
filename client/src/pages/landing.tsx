@@ -3,9 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Mail, Zap, Shield, ArrowRight } from "lucide-react";
 
 export default function Landing() {
-  const handleLogin = () => {
+  const handleLogin = async () => {
     console.log('Login button clicked - redirecting to /api/login');
-    window.location.href = '/api/login';
+    try {
+      // Force a full page navigation to the login endpoint
+      window.location.replace('/api/login');
+    } catch (error) {
+      console.error('Login redirect failed:', error);
+      // Fallback: try direct navigation
+      window.location.href = '/api/login';
+    }
   };
 
   return (
