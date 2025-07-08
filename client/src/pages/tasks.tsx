@@ -16,7 +16,7 @@ import {
   CircleDashed,
   Calendar,
   User,
-  Pound
+  DollarSign
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -286,7 +286,7 @@ export default function Tasks() {
                           )}
                           {task.amount && (
                             <div className="flex items-center gap-1">
-                              <Pound className="h-3 w-3" />
+                              <DollarSign className="h-3 w-3" />
                               {task.currency || "GBP"} {task.amount.toFixed(2)}
                             </div>
                           )}
