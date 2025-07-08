@@ -17,13 +17,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('Auth user check - Session:', {
+        hasUser: !!req.user,
+        hasClaims: !!req.user?.claims,
+        userId: req.user?.claims?.sub
+      });
+      
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Don't auto-fetch on user endpoint - let frontend handle Google connection flow
+      console.log('User found:', {
+        id: user.id,
+        email: user.email,
+        hasGoogleToken: !!user.googleAccessToken
+      });
       
       res.json(user);
     } catch (error) {
@@ -104,12 +114,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Refresh emails from Gmail
   app.post("/api/emails/refresh", isAuthenticated, async (req: any, res) => {
     try {
+      console.log('Email refresh request - User check:', {
+        hasUser: !!req.user,
+        userId: req.user?.claims?.sub
+      });
+      
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (!user) {
+        console.log('User not found in database:', userId);
         return res.status(404).json({ message: "User not found" });
       }
+      
+      console.log('User for email refresh:', {
+        id: user.id,
+        hasGoogleToken: !!user.googleAccessToken,
+        hasRefreshToken: !!user.googleRefreshToken
+      });
 
       if (!user.googleAccessToken) {
         return res.status(400).json({ 

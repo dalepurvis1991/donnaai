@@ -8,6 +8,15 @@ export class GmailApiService {
     }
 
     try {
+      console.log('Gmail API Service - Environment check:', {
+        hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        clientIdLength: process.env.GOOGLE_CLIENT_ID?.length,
+        secretLength: process.env.GOOGLE_CLIENT_SECRET?.length,
+        userHasAccessToken: !!user.googleAccessToken,
+        userHasRefreshToken: !!user.googleRefreshToken
+      });
+      
       // Set up OAuth2 client with user's tokens
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
