@@ -84,8 +84,10 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
+  const domains = process.env.REPLIT_DOMAINS!.split(",");
+  console.log(`All available domains: ${domains.join(", ")}`);
+  
+  for (const domain of domains) {
     console.log(`Setting up Replit OAuth for domain: ${domain}`);
     const strategy = new Strategy(
       {
@@ -98,13 +100,36 @@ export async function setupAuth(app: Express) {
     );
     passport.use(strategy);
   }
+  
+  // Also setup for the custom domain
+  const customDomain = "baron-inbox-dalepurvis.replit.app";
+  console.log(`Setting up Replit OAuth for custom domain: ${customDomain}`);
+  const customStrategy = new Strategy(
+    {
+      name: `replitauth:${customDomain}`,
+      config,
+      scope: "openid email profile offline_access",
+      callbackURL: `https://${customDomain}/api/callback`,
+    },
+    verify,
+  );
+  passport.use(customStrategy);
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     console.log(`Login request from: ${req.hostname}`);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    const strategyName = `replitauth:${req.hostname}`;
+    console.log(`Using strategy: ${strategyName}`);
+    
+    // Check if strategy exists
+    if (!passport._strategies[strategyName]) {
+      console.error(`Strategy ${strategyName} not found. Available strategies:`, Object.keys(passport._strategies));
+      return res.status(500).json({ error: "Authentication strategy not found" });
+    }
+    
+    passport.authenticate(strategyName, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
