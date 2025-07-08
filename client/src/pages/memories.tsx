@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Brain, Search, Plus, Mail, MessageSquare, FileText, Clock, User, Hash } from "lucide-react";
+import { Brain, Search, Plus, Mail, MessageSquare, FileText, Clock, User, Hash, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Memory {
@@ -77,7 +77,17 @@ export default function Memories() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.location.href = "/"}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+        <div className="h-6 w-px bg-border" />
         <Brain className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Memory Service</h1>
         <Badge variant="outline" className="ml-2">

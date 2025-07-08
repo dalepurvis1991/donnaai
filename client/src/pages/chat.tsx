@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, MessageCircle, Sparkles, Mail, Calendar } from "lucide-react";
+import { Send, Bot, User, MessageCircle, Sparkles, Mail, Calendar, ArrowLeft, Home } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface ChatMessage {
@@ -85,7 +85,17 @@ export default function Chat() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.location.href = "/"}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+        <div className="h-6 w-px bg-border" />
         <MessageCircle className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Chat with Baron</h1>
         <Badge variant="outline" className="ml-2">

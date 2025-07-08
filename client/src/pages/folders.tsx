@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Folder, Plus, Trash2, Mail, Settings } from "lucide-react";
+import { Folder, Plus, Trash2, Mail, Settings, ArrowLeft } from "lucide-react";
 
 interface EmailFolder {
   id: number;
@@ -186,9 +186,21 @@ export default function Folders() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Email Folders</h1>
-          <p className="text-muted-foreground">Organize your emails with custom folders and automatic rules</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.href = "/"}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <div className="h-6 w-px bg-border" />
+          <div>
+            <h1 className="text-2xl font-bold">Email Folders</h1>
+            <p className="text-muted-foreground">Organize your emails with custom folders and automatic rules</p>
+          </div>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>

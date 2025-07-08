@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Settings as SettingsIcon } from "lucide-react";
+import { Trash2, Plus, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
 
 interface EmailRule {
   id?: string;
@@ -142,7 +142,17 @@ export default function Settings() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.location.href = "/"}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+        <div className="h-6 w-px bg-border" />
         <SettingsIcon className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Email Categorization Settings</h1>
       </div>

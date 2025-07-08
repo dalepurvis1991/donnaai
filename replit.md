@@ -134,6 +134,9 @@ Changelog:
 - July 08, 2025. Business insights generation: "10 sales orders, 5 smoked oak, £1038.09 total" style summaries with AI analysis
 - July 08, 2025. Customizable push notifications: user-configurable timing, timezone settings, and digest content preferences
 - July 08, 2025. Complete digest management: history tracking, notification settings, sales product breakdown with OpenAI integration
+- July 08, 2025. **CRITICAL NAVIGATION FIX**: Resolved issue where users were trapped in chat function without navigation
+- July 08, 2025. Added "Back to Dashboard" buttons to all secondary pages: chat, folders, digest, memories, and settings
+- July 08, 2025. Enhanced user experience with consistent navigation patterns across all Baron features
 
 ## User Preferences
 

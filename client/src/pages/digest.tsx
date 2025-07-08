@@ -20,7 +20,8 @@ import {
   Bell,
   BarChart3,
   Zap,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from "lucide-react";
 
 interface DigestData {
@@ -137,9 +138,21 @@ export default function Digest() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Daily Business Digest</h1>
-          <p className="text-muted-foreground">Your personalized business insights and email summary</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.href = "/"}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <div className="h-6 w-px bg-border" />
+          <div>
+            <h1 className="text-2xl font-bold">Daily Business Digest</h1>
+            <p className="text-muted-foreground">Your personalized business insights and email summary</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
