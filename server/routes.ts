@@ -112,6 +112,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get email statistics
+  app.get("/api/emails/stats", async (req, res) => {
+    try {
+      const stats = await storage.getEmailStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to get email statistics" 
+      });
+    }
+  });
+
   // Refresh emails from Gmail
   app.post("/api/emails/refresh", isAuthenticated, async (req: any, res) => {
     try {
