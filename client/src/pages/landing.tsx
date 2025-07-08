@@ -5,13 +5,24 @@ import { Mail, Zap, Shield, ArrowRight } from "lucide-react";
 export default function Landing() {
   const handleLogin = async () => {
     console.log('Login button clicked - redirecting to /api/login');
+    console.log('Current location:', window.location.href);
+    console.log('Target URL:', window.location.origin + '/api/login');
+    
+    // Add a visible indication that button was clicked
+    const button = document.querySelector('button');
+    if (button) {
+      button.textContent = 'Redirecting...';
+      button.disabled = true;
+    }
+    
     try {
       // Force a full page navigation to the login endpoint
-      window.location.replace('/api/login');
+      const targetUrl = window.location.origin + '/api/login';
+      console.log('Attempting redirect to:', targetUrl);
+      window.location.href = targetUrl;
     } catch (error) {
       console.error('Login redirect failed:', error);
-      // Fallback: try direct navigation
-      window.location.href = '/api/login';
+      alert('Failed to redirect. Please try again.');
     }
   };
 
