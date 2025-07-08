@@ -27,18 +27,16 @@ export default function Dashboard() {
   // Debug logging
   console.log('Google status:', googleStatus, 'Loading:', googleStatusLoading, 'Error:', googleStatusError);
 
-  // Fetch email statistics (only if Google connected)
+  // Fetch email statistics
   const { data: stats, isLoading: statsLoading } = useQuery<EmailStats>({
     queryKey: ["/api/emails/stats"],
     refetchInterval: 60000,
-    enabled: googleStatus?.connected === true,
   });
 
-  // Fetch categorized emails (only if Google connected)
+  // Fetch categorized emails
   const { data: emails, isLoading: emailsLoading } = useQuery<CategorizedEmails>({
     queryKey: ["/api/emails/categorized"],
     refetchInterval: 60000,
-    enabled: googleStatus?.connected === true,
   });
 
   // Check health status (only if Google connected)

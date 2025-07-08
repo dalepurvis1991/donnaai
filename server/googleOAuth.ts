@@ -88,7 +88,7 @@ export function setupGoogleAuth(app: Express) {
   // Check Google connection status
   app.get('/api/auth/google/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       console.log('Google status check for user:', userId, 'has token:', !!(user?.googleAccessToken));
