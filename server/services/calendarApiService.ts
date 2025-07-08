@@ -12,7 +12,7 @@ export class CalendarApiService {
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        'https://developers.google.com/oauthplayground'
+        'https://baron-inbox-dalepurvis.replit.app/api/auth/google/callback'
       );
       oauth2Client.setCredentials({
         access_token: user.googleAccessToken,
