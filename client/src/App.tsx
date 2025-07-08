@@ -9,11 +9,17 @@ import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  console.log('Router - Auth State:', { isAuthenticated, isLoading, hasUser: !!user });
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {isLoading ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-lg">Loading...</div>
+        </div>
+      ) : !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
         <>
