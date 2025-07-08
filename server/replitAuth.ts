@@ -78,10 +78,17 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      console.log('OAuth verification started for user:', tokens.claims().sub);
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      console.log('OAuth verification completed for user:', tokens.claims().sub);
+      verified(null, user);
+    } catch (error) {
+      console.error('OAuth verification failed:', error);
+      verified(error, null);
+    }
   };
 
   const domains = process.env.REPLIT_DOMAINS!.split(",");
@@ -137,6 +144,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     console.log(`Callback request from: ${req.hostname}`);
+    console.log(`Callback query params:`, req.query);
     const strategyName = `replitauth:${req.hostname}`;
     
     if (!passport._strategies[strategyName]) {
@@ -147,6 +155,7 @@ export async function setupAuth(app: Express) {
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+      failureMessage: true
     })(req, res, next);
   });
 
