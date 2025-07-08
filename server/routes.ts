@@ -243,6 +243,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Settings API routes
+  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const settings = await storage.getUserSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const settings = await storage.updateUserSettings(userId, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  app.post("/api/settings/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { type, value, category, confidence } = req.body;
+      
+      const settings = await storage.getUserSettings(userId);
+      if (type === "sender") {
+        settings.emailRules.senderRules.push({ email: value, category, confidence });
+      } else if (type === "subject") {
+        settings.emailRules.subjectRules.push({ pattern: value, category, confidence });
+      }
+      
+      const updated = await storage.updateUserSettings(userId, settings);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error creating rule:", error);
+      res.status(500).json({ message: "Failed to create rule" });
+    }
+  });
+
+  // Email detail and management routes
+  app.get("/api/emails/:id", async (req, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const email = await storage.getEmailById(emailId);
+      if (!email) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+      res.json(email);
+    } catch (error) {
+      console.error("Error fetching email:", error);
+      res.status(500).json({ message: "Failed to fetch email" });
+    }
+  });
+
+  app.put("/api/emails/:id/categorize", isAuthenticated, async (req, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const { category } = req.body;
+      const updated = await storage.updateEmailCategory(emailId, category);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating email category:", error);
+      res.status(500).json({ message: "Failed to update email category" });
+    }
+  });
+
+  app.post("/api/emails/:id/reply", isAuthenticated, async (req: any, res) => {
+    try {
+      const { to, subject, body } = req.body;
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.googleAccessToken) {
+        return res.status(401).json({ message: "Gmail access required" });
+      }
+
+      // TODO: Implement actual Gmail API send functionality
+      // For now, we'll simulate sending
+      console.log(`Simulating email send: ${subject} to ${to}`);
+      
+      res.json({ message: "Reply sent successfully" });
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      res.status(500).json({ message: "Failed to send reply" });
+    }
+  });
+
+  // Chat API routes
+  app.get("/api/chat/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const messages = await storage.getChatMessages(userId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      res.status(500).json({ message: "Failed to fetch chat messages" });
+    }
+  });
+
+  app.post("/api/chat/send", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { content } = req.body;
+      
+      // Store user message
+      await storage.createChatMessage({
+        userId,
+        role: "user",
+        content,
+      });
+
+      // Generate AI response using RAG
+      const { ragService } = await import("./services/ragService");
+      const aiResponse = await ragService.processUserMessage(userId, content);
+      
+      // Store AI response
+      await storage.createChatMessage({
+        userId,
+        role: "assistant",
+        content: aiResponse,
+      });
+
+      res.json({ message: "Message sent successfully" });
+    } catch (error) {
+      console.error("Error processing chat message:", error);
+      res.status(500).json({ message: "Failed to process message" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

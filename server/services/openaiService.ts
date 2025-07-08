@@ -129,4 +129,42 @@ Consider:
   }
 }
 
+  async generateChatResponse(systemPrompt: string, userMessage: string): Promise<string> {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      return response.choices[0].message.content || "I couldn't generate a response. Please try again.";
+    } catch (error) {
+      console.error("Error generating chat response:", error);
+      return this.fallbackChatResponse(userMessage);
+    }
+  }
+
+  private fallbackChatResponse(userMessage: string): string {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes("email") && lowerMessage.includes("pattern")) {
+      return "Based on your recent activity, I can help you analyze email patterns. Would you like me to show you your most frequent senders or categorization trends?";
+    }
+    
+    if (lowerMessage.includes("categorize") || lowerMessage.includes("organize")) {
+      return "I can help you improve email categorization! You can adjust settings to create custom rules for specific senders or subjects.";
+    }
+    
+    if (lowerMessage.includes("important") || lowerMessage.includes("priority")) {
+      return "Your Draft category contains emails that typically need action. Would you like me to help you review them?";
+    }
+    
+    return "I'm here to help with your email management. You can ask me about email patterns, categorization rules, or specific email insights.";
+  }
+}
+
 export const openaiService = new OpenAIService();

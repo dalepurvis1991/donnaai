@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, RefreshCw, LogOut } from "lucide-react";
+import { Mail, RefreshCw, LogOut, Settings, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
@@ -53,6 +53,26 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
                 {connectionStatus === 'connected' ? 'Connected to Gmail' : 'Gmail Disconnected'}
               </span>
             </div>
+            
+            <Button
+              onClick={() => window.location.href = "/chat"}
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Chat
+            </Button>
+            
+            <Button
+              onClick={() => window.location.href = "/settings"}
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
             
             <Button
               onClick={onRefresh}

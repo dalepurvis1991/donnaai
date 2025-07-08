@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
+import Settings from "@/pages/settings";
+import EmailDetail from "@/pages/email-detail";
+import Chat from "@/pages/chat";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +27,9 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/email/:id" component={EmailDetail} />
+          <Route path="/chat" component={Chat} />
         </>
       )}
       <Route component={NotFound} />

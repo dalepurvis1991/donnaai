@@ -38,7 +38,7 @@ export default function EmailCard({ email, color }: EmailCardProps) {
   const timeAgo = formatTimeAgo(email.date);
 
   return (
-    <div className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors duration-200 cursor-pointer">
+    <div className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors duration-200 cursor-pointer" onClick={() => window.location.href = `/email/${email.id}`}>
       <div className="flex items-start justify-between mb-2">
         <h3 className="font-medium text-slate-900 text-sm truncate pr-2">
           {email.subject}

@@ -106,3 +106,48 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
 
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+// User settings for email categorization rules
+export const userSettings = pgTable("user_settings", {
+  id: varchar("id").primaryKey().notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  emailRules: jsonb("email_rules").$type<{
+    senderRules: { email: string; category: string; confidence: number }[];
+    subjectRules: { pattern: string; category: string; confidence: number }[];
+    generalPreferences: {
+      prioritizePersonal: boolean;
+      autoForwardCustomerService: boolean;
+      treatNewslettersAsFYI: boolean;
+    };
+  }>().default({
+    senderRules: [],
+    subjectRules: [],
+    generalPreferences: {
+      prioritizePersonal: false,
+      autoForwardCustomerService: true,
+      treatNewslettersAsFYI: true,
+    },
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserSettings = typeof userSettings.$inferInsert;
+
+// Chat messages for AI interaction
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  role: varchar("role", { enum: ["user", "assistant"] }).notNull(),
+  content: text("content").notNull(),
+  emailContext: jsonb("email_context").$type<{
+    emailIds: number[];
+    category?: string;
+    action?: string;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;

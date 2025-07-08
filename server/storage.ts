@@ -1,4 +1,4 @@
-import { emails, calendarEvents, users, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser } from "@shared/schema";
+import { emails, calendarEvents, users, userSettings, chatMessages, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -24,6 +24,18 @@ export interface IStorage {
   // User operations for Google OAuth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Settings operations
+  getUserSettings(userId: string): Promise<any>;
+  updateUserSettings(userId: string, settings: any): Promise<any>;
+  
+  // Chat operations
+  getChatMessages(userId: string): Promise<any[]>;
+  createChatMessage(message: any): Promise<any>;
+  
+  // Email details and management
+  getEmailById(id: number): Promise<any>;
+  updateEmailCategory(id: number, category: string): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -194,6 +206,76 @@ export class DatabaseStorage implements IStorage {
 
   async clearCalendarEvents(userId: string): Promise<void> {
     await db.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
+  }
+
+  // Settings operations
+  async getUserSettings(userId: string): Promise<any> {
+    const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    if (!settings) {
+      // Create default settings
+      const [newSettings] = await db
+        .insert(userSettings)
+        .values({
+          id: `settings-${userId}`,
+          userId,
+          emailRules: {
+            senderRules: [],
+            subjectRules: [],
+            generalPreferences: {
+              prioritizePersonal: false,
+              autoForwardCustomerService: true,
+              treatNewslettersAsFYI: true,
+            },
+          },
+        })
+        .returning();
+      return newSettings;
+    }
+    return settings;
+  }
+
+  async updateUserSettings(userId: string, settings: any): Promise<any> {
+    const [updated] = await db
+      .update(userSettings)
+      .set({
+        emailRules: settings.emailRules,
+        updatedAt: new Date(),
+      })
+      .where(eq(userSettings.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  // Chat operations
+  async getChatMessages(userId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.userId, userId))
+      .orderBy(chatMessages.createdAt);
+  }
+
+  async createChatMessage(message: any): Promise<any> {
+    const [created] = await db
+      .insert(chatMessages)
+      .values(message)
+      .returning();
+    return created;
+  }
+
+  // Email details and management
+  async getEmailById(id: number): Promise<any> {
+    const [email] = await db.select().from(emails).where(eq(emails.id, id));
+    return email;
+  }
+
+  async updateEmailCategory(id: number, category: string): Promise<any> {
+    const [updated] = await db
+      .update(emails)
+      .set({ category })
+      .where(eq(emails.id, id))
+      .returning();
+    return updated;
   }
 }
 
