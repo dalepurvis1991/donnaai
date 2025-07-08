@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, varchar, jsonb, index, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, varchar, jsonb, index, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -227,3 +227,57 @@ export const notificationSettings = pgTable("notification_settings", {
 
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
+
+// Tasks/Jobs tracking system
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  status: varchar("status", { enum: ["pending", "in_progress", "completed", "cancelled"] }).default("pending"),
+  priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
+  category: varchar("category"), // e.g., "procurement", "maintenance", "admin"
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  
+  // AI-detected metadata
+  detectedFromEmailId: integer("detected_from_email_id").references(() => emails.id),
+  relatedEmails: jsonb("related_emails").$type<number[]>().default([]), // Array of email IDs
+  autoDetected: boolean("auto_detected").default(false),
+  confidence: real("confidence"), // AI confidence in task detection
+  
+  // Business context
+  supplier: varchar("supplier"),
+  amount: real("amount"),
+  currency: varchar("currency").default("GBP"),
+  orderNumber: varchar("order_number"),
+  invoiceNumber: varchar("invoice_number"),
+  
+  // Task tracking stages
+  stages: jsonb("stages").$type<{
+    stage: string;
+    completed: boolean;
+    completedAt?: Date;
+    emailId?: number;
+  }[]>().default([]),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = typeof tasks.$inferInsert;
+
+// Task comments/notes
+export const taskComments = pgTable("task_comments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").notNull().references(() => tasks.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  isSystemGenerated: boolean("is_system_generated").default(false),
+  emailId: integer("email_id").references(() => emails.id), // If comment was auto-generated from email
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type TaskComment = typeof taskComments.$inferSelect;
+export type InsertTaskComment = typeof taskComments.$inferInsert;

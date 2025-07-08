@@ -1,4 +1,4 @@
-import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, dailyDigests, notificationSettings, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule, type DailyDigest, type InsertDailyDigest, type NotificationSettings, type InsertNotificationSettings } from "@shared/schema";
+import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, dailyDigests, notificationSettings, tasks, taskComments, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule, type DailyDigest, type InsertDailyDigest, type NotificationSettings, type InsertNotificationSettings, type Task, type InsertTask, type TaskComment, type InsertTaskComment } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -54,6 +54,17 @@ export interface IStorage {
   // Notification settings
   getUserNotificationSettings(userId: string): Promise<NotificationSettings | null>;
   updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings>;
+  
+  // Task management
+  getUserTasks(userId: string, statuses?: string[]): Promise<Task[]>;
+  getTaskById(id: number): Promise<Task | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, updates: Partial<Task>): Promise<Task>;
+  deleteTask(id: number): Promise<void>;
+  
+  // Task comments
+  getTaskComments(taskId: number): Promise<TaskComment[]>;
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
 }
 
 export class MemStorage implements IStorage {
@@ -495,6 +506,55 @@ export class DatabaseStorage implements IStorage {
       console.error("Error updating notification settings:", error);
       throw error;
     }
+  }
+
+  // Task management methods
+  async getUserTasks(userId: string, statuses?: string[]): Promise<Task[]> {
+    let query = db.select().from(tasks).where(eq(tasks.userId, userId));
+    
+    if (statuses && statuses.length > 0) {
+      query = query.where(eq(tasks.status, statuses[0])); // Simple implementation
+    }
+    
+    const result = await query.orderBy(tasks.createdAt);
+    return result;
+  }
+
+  async getTaskById(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task;
+  }
+
+  async createTask(taskData: InsertTask): Promise<Task> {
+    const [task] = await db.insert(tasks).values(taskData).returning();
+    return task;
+  }
+
+  async updateTask(id: number, updates: Partial<Task>): Promise<Task> {
+    const [task] = await db
+      .update(tasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return task;
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    const result = await db
+      .select()
+      .from(taskComments)
+      .where(eq(taskComments.taskId, taskId))
+      .orderBy(taskComments.createdAt);
+    return result;
+  }
+
+  async createTaskComment(commentData: InsertTaskComment): Promise<TaskComment> {
+    const [comment] = await db.insert(taskComments).values(commentData).returning();
+    return comment;
   }
 }
 

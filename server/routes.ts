@@ -5,6 +5,8 @@ import { gmailApiService } from "./services/gmailApiService";
 import { calendarApiService } from "./services/calendarApiService";
 import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
 import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
+import { digestService } from "./services/digestService";
+import { taskService } from "./services/taskService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -24,6 +26,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       url: req.url,
       query: req.query
     });
+  });
+
+  // Task management routes
+  app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const statuses = req.query.status ? [req.query.status] : undefined;
+      const tasks = await storage.getUserTasks(userId, statuses);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const task = await storage.createTask({ ...req.body, userId });
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.get('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const task = await storage.getTaskById(parseInt(req.params.id));
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.put('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const task = await storage.updateTask(parseInt(req.params.id), req.body);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteTask(parseInt(req.params.id));
+      res.json({ message: "Task deleted" });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  app.get('/api/tasks/:id/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const comments = await storage.getTaskComments(parseInt(req.params.id));
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching task comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  app.post('/api/tasks/:id/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const comment = await storage.createTaskComment({
+        ...req.body,
+        taskId: parseInt(req.params.id),
+        userId
+      });
+      res.json(comment);
+    } catch (error) {
+      console.error("Error creating task comment:", error);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // Email processing for task detection
+  app.post('/api/tasks/process-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { emailId, emailContent } = req.body;
+      
+      await taskService.processEmailForTasks(emailId, emailContent, userId);
+      res.json({ message: "Email processed for tasks" });
+    } catch (error) {
+      console.error("Error processing email for tasks:", error);
+      res.status(500).json({ message: "Failed to process email" });
+    }
   });
 
   // Auth routes
