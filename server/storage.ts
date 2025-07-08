@@ -1,4 +1,4 @@
-import { emails, calendarEvents, users, userSettings, chatMessages, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser } from "@shared/schema";
+import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -36,6 +36,16 @@ export interface IStorage {
   // Email details and management
   getEmailById(id: number): Promise<any>;
   updateEmailCategory(id: number, category: string): Promise<any>;
+  
+  // Folder operations
+  getUserFolders(userId: string): Promise<EmailFolder[]>;
+  createFolder(userId: string, name: string, color?: string, description?: string): Promise<EmailFolder>;
+  deleteFolder(folderId: number): Promise<void>;
+  assignEmailToFolder(emailId: number, folderId: number): Promise<void>;
+  getEmailsByFolder(folderId: number): Promise<any[]>;
+  createFolderRule(userId: string, folderId: number, ruleType: string, ruleValue: string): Promise<FolderRule>;
+  getFolderRules(userId: string): Promise<FolderRule[]>;
+  applyFolderRules(emailId: number, userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -276,6 +286,148 @@ export class DatabaseStorage implements IStorage {
       .where(eq(emails.id, id))
       .returning();
     return updated;
+  }
+
+  // Folder operations
+  async getUserFolders(userId: string): Promise<EmailFolder[]> {
+    try {
+      return await db.select().from(emailFolders).where(eq(emailFolders.userId, userId));
+    } catch (error) {
+      console.error("Error fetching user folders:", error);
+      throw error;
+    }
+  }
+
+  async createFolder(userId: string, name: string, color?: string, description?: string): Promise<EmailFolder> {
+    try {
+      const [folder] = await db
+        .insert(emailFolders)
+        .values({
+          userId,
+          name,
+          color: color || "#3b82f6",
+          description,
+        })
+        .returning();
+      return folder;
+    } catch (error) {
+      console.error("Error creating folder:", error);
+      throw error;
+    }
+  }
+
+  async deleteFolder(folderId: number): Promise<void> {
+    try {
+      // First remove all email assignments to this folder
+      await db.delete(emailFolderAssignments).where(eq(emailFolderAssignments.folderId, folderId));
+      // Then remove all rules for this folder
+      await db.delete(folderRules).where(eq(folderRules.folderId, folderId));
+      // Finally delete the folder itself
+      await db.delete(emailFolders).where(eq(emailFolders.id, folderId));
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      throw error;
+    }
+  }
+
+  async assignEmailToFolder(emailId: number, folderId: number): Promise<void> {
+    try {
+      await db
+        .insert(emailFolderAssignments)
+        .values({ emailId, folderId })
+        .onConflictDoNothing();
+    } catch (error) {
+      console.error("Error assigning email to folder:", error);
+      throw error;
+    }
+  }
+
+  async getEmailsByFolder(folderId: number): Promise<any[]> {
+    try {
+      const result = await db
+        .select({
+          email: emails,
+          assignment: emailFolderAssignments,
+        })
+        .from(emails)
+        .innerJoin(emailFolderAssignments, eq(emails.id, emailFolderAssignments.emailId))
+        .where(eq(emailFolderAssignments.folderId, folderId));
+      
+      return result.map(r => r.email);
+    } catch (error) {
+      console.error("Error fetching emails by folder:", error);
+      throw error;
+    }
+  }
+
+  async createFolderRule(userId: string, folderId: number, ruleType: string, ruleValue: string): Promise<FolderRule> {
+    try {
+      const [rule] = await db
+        .insert(folderRules)
+        .values({
+          userId,
+          folderId,
+          ruleType,
+          ruleValue,
+          priority: 0,
+        })
+        .returning();
+      return rule;
+    } catch (error) {
+      console.error("Error creating folder rule:", error);
+      throw error;
+    }
+  }
+
+  async getFolderRules(userId: string): Promise<FolderRule[]> {
+    try {
+      return await db.select().from(folderRules).where(eq(folderRules.userId, userId));
+    } catch (error) {
+      console.error("Error fetching folder rules:", error);
+      throw error;
+    }
+  }
+
+  async applyFolderRules(emailId: number, userId: string): Promise<void> {
+    try {
+      // Get email details
+      const [email] = await db.select().from(emails).where(eq(emails.id, emailId));
+      if (!email) return;
+
+      // Get active rules for this user
+      const rules = await db
+        .select()
+        .from(folderRules)
+        .where(eq(folderRules.userId, userId))
+        .orderBy(folderRules.priority);
+
+      for (const rule of rules) {
+        let matches = false;
+        
+        switch (rule.ruleType) {
+          case 'sender':
+            matches = email.senderEmail === rule.ruleValue;
+            break;
+          case 'domain':
+            matches = email.senderEmail.endsWith(rule.ruleValue);
+            break;
+          case 'subject':
+            matches = email.subject.toLowerCase().includes(rule.ruleValue.toLowerCase());
+            break;
+          case 'keyword':
+            matches = email.body?.toLowerCase().includes(rule.ruleValue.toLowerCase()) || false;
+            break;
+        }
+
+        if (matches) {
+          await this.assignEmailToFolder(emailId, rule.folderId);
+          break; // Only apply first matching rule
+        }
+      }
+    } catch (error) {
+      console.error("Error applying folder rules:", error);
+      throw error;
+    }
   }
 }
 

@@ -507,6 +507,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Folder management routes
+  app.get("/api/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const folders = await storage.getUserFolders(userId);
+      res.json(folders);
+    } catch (error) {
+      console.error("Error fetching folders:", error);
+      res.status(500).json({ message: "Failed to fetch folders" });
+    }
+  });
+
+  app.post("/api/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { name, color, description } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Folder name is required" });
+      }
+      
+      const folder = await storage.createFolder(userId, name, color, description);
+      res.json(folder);
+    } catch (error) {
+      console.error("Error creating folder:", error);
+      res.status(500).json({ message: "Failed to create folder" });
+    }
+  });
+
+  app.delete("/api/folders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      await storage.deleteFolder(folderId);
+      res.json({ message: "Folder deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      res.status(500).json({ message: "Failed to delete folder" });
+    }
+  });
+
+  app.get("/api/folders/:id/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const emails = await storage.getEmailsByFolder(folderId);
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching folder emails:", error);
+      res.status(500).json({ message: "Failed to fetch folder emails" });
+    }
+  });
+
+  app.post("/api/emails/:id/folder", isAuthenticated, async (req: any, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const { folderId } = req.body;
+      
+      if (!folderId) {
+        return res.status(400).json({ message: "Folder ID is required" });
+      }
+      
+      await storage.assignEmailToFolder(emailId, folderId);
+      res.json({ message: "Email assigned to folder successfully" });
+    } catch (error) {
+      console.error("Error assigning email to folder:", error);
+      res.status(500).json({ message: "Failed to assign email to folder" });
+    }
+  });
+
+  app.post("/api/folders/:id/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { ruleType, ruleValue } = req.body;
+      if (!ruleType || !ruleValue) {
+        return res.status(400).json({ message: "Rule type and value are required" });
+      }
+      
+      const rule = await storage.createFolderRule(userId, folderId, ruleType, ruleValue);
+      res.json(rule);
+    } catch (error) {
+      console.error("Error creating folder rule:", error);
+      res.status(500).json({ message: "Failed to create folder rule" });
+    }
+  });
+
+  app.get("/api/folder-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const rules = await storage.getFolderRules(userId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching folder rules:", error);
+      res.status(500).json({ message: "Failed to fetch folder rules" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

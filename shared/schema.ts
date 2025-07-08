@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, varchar, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, varchar, jsonb, index, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -151,3 +151,44 @@ export const chatMessages = pgTable("chat_messages", {
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+// Email folders/labels
+export const emailFolders = pgTable("email_folders", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  color: varchar("color").default("#3b82f6"), // hex color
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type EmailFolder = typeof emailFolders.$inferSelect;
+export type InsertEmailFolder = typeof emailFolders.$inferInsert;
+
+// Email folder assignments
+export const emailFolderAssignments = pgTable("email_folder_assignments", {
+  id: serial("id").primaryKey(),
+  emailId: integer("email_id").notNull().references(() => emails.id),
+  folderId: integer("folder_id").notNull().references(() => emailFolders.id),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+});
+
+export type EmailFolderAssignment = typeof emailFolderAssignments.$inferSelect;
+export type InsertEmailFolderAssignment = typeof emailFolderAssignments.$inferInsert;
+
+// Folder rules for automatic assignment
+export const folderRules = pgTable("folder_rules", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  folderId: integer("folder_id").notNull().references(() => emailFolders.id),
+  ruleType: varchar("rule_type").notNull(), // "sender", "subject", "domain", "keyword"
+  ruleValue: varchar("rule_value").notNull(),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0), // higher numbers = higher priority
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type FolderRule = typeof folderRules.$inferSelect;
+export type InsertFolderRule = typeof folderRules.$inferInsert;
