@@ -4,8 +4,7 @@ import { storage } from "./storage";
 import { gmailApiService } from "./services/gmailApiService";
 import { calendarApiService } from "./services/calendarApiService";
 import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupGoogleAuth } from "./googleOAuth";
+import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -14,11 +13,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
   
-  // Set up Replit authentication
-  await setupAuth(app);
-  
-  // Set up Google OAuth for Gmail/Calendar access
-  setupGoogleAuth(app);
+  // Set up Google-only authentication 
+  setupGoogleOnlyAuth(app);
 
   // Debug route to test callback URL
   app.get('/api/test-callback', (req, res) => {
@@ -33,18 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      console.log('Auth user check - Session:', {
-        hasUser: !!req.user,
-        hasClaims: !!req.user?.claims,
-        userId: req.user?.claims?.sub
-      });
-      
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
+      const user = req.user; // User is already loaded by isAuthenticated middleware
       console.log('User found:', {
         id: user.id,
         email: user.email,
