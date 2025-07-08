@@ -11,6 +11,14 @@ const getRedirectUri = (req: any) => {
 };
 
 const createOAuthClient = (req: any) => {
+  console.log('Creating OAuth client - Environment check:', {
+    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length,
+    secretLength: process.env.GOOGLE_CLIENT_SECRET?.length,
+    redirectUri: getRedirectUri(req)
+  });
+  
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
