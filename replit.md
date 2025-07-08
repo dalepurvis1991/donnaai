@@ -129,6 +129,11 @@ Changelog:
 - July 08, 2025. Advanced learning algorithms: communication style detection, business context analysis, and 90% accurate contextual responses
 - July 08, 2025. Folder system includes: database schema, API routes, frontend interface, and chat-based folder creation commands
 - July 08, 2025. Vector-enhanced RAG system: 1000+ email learning capability, semantic memory search, business relationship analysis
+- July 08, 2025. **DAILY BUSINESS DIGEST SYSTEM LAUNCHED**: AI-powered daily business intelligence with sales metrics extraction
+- July 08, 2025. Smart email parsing: automatically extracts sales orders, product types, revenue totals from order confirmation emails
+- July 08, 2025. Business insights generation: "10 sales orders, 5 smoked oak, £1038.09 total" style summaries with AI analysis
+- July 08, 2025. Customizable push notifications: user-configurable timing, timezone settings, and digest content preferences
+- July 08, 2025. Complete digest management: history tracking, notification settings, sales product breakdown with OpenAI integration
 
 ## User Preferences
 

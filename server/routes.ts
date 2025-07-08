@@ -618,6 +618,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Daily digest routes
+  app.post("/api/digest/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { hoursBack = 24 } = req.body;
+      const { digestService } = await import("./services/digestService");
+      
+      const digestData = await digestService.generateDailyDigest(userId, hoursBack);
+      await digestService.saveDailyDigest(userId, digestData);
+      
+      res.json(digestData);
+    } catch (error) {
+      console.error("Error generating digest:", error);
+      res.status(500).json({ message: "Failed to generate digest" });
+    }
+  });
+
+  app.get("/api/digest/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { days = 7 } = req.query;
+      const { digestService } = await import("./services/digestService");
+      
+      const history = await digestService.getUserDigestHistory(userId, parseInt(days as string));
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching digest history:", error);
+      res.status(500).json({ message: "Failed to fetch digest history" });
+    }
+  });
+
+  // Notification settings routes
+  app.get("/api/notifications/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const settings = await storage.getUserNotificationSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+      res.status(500).json({ message: "Failed to fetch notification settings" });
+    }
+  });
+
+  app.put("/api/notifications/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const settings = await storage.updateNotificationSettings(userId, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ message: "Failed to update notification settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

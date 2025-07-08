@@ -1,4 +1,4 @@
-import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule } from "@shared/schema";
+import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, dailyDigests, notificationSettings, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule, type DailyDigest, type InsertDailyDigest, type NotificationSettings, type InsertNotificationSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -46,6 +46,14 @@ export interface IStorage {
   createFolderRule(userId: string, folderId: number, ruleType: string, ruleValue: string): Promise<FolderRule>;
   getFolderRules(userId: string): Promise<FolderRule[]>;
   applyFolderRules(emailId: number, userId: string): Promise<void>;
+  
+  // Daily digest operations
+  saveDailyDigest(digest: any): Promise<DailyDigest>;
+  getUserDailyDigests(userId: string, days: number): Promise<DailyDigest[]>;
+  
+  // Notification settings
+  getUserNotificationSettings(userId: string): Promise<NotificationSettings | null>;
+  updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings>;
 }
 
 export class MemStorage implements IStorage {
@@ -426,6 +434,65 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error("Error applying folder rules:", error);
+      throw error;
+    }
+  }
+
+  // Daily digest operations
+  async saveDailyDigest(digestData: any): Promise<DailyDigest> {
+    try {
+      const [digest] = await db
+        .insert(dailyDigests)
+        .values(digestData)
+        .returning();
+      return digest;
+    } catch (error) {
+      console.error("Error saving daily digest:", error);
+      throw error;
+    }
+  }
+
+  async getUserDailyDigests(userId: string, days: number = 7): Promise<DailyDigest[]> {
+    try {
+      const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      return await db
+        .select()
+        .from(dailyDigests)
+        .where(eq(dailyDigests.userId, userId))
+        .orderBy(dailyDigests.date);
+    } catch (error) {
+      console.error("Error fetching daily digests:", error);
+      throw error;
+    }
+  }
+
+  // Notification settings
+  async getUserNotificationSettings(userId: string): Promise<NotificationSettings | null> {
+    try {
+      const [settings] = await db
+        .select()
+        .from(notificationSettings)
+        .where(eq(notificationSettings.userId, userId));
+      return settings || null;
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+      throw error;
+    }
+  }
+
+  async updateNotificationSettings(userId: string, settingsData: Partial<InsertNotificationSettings>): Promise<NotificationSettings> {
+    try {
+      const [updated] = await db
+        .insert(notificationSettings)
+        .values({ userId, ...settingsData })
+        .onConflictDoUpdate({
+          target: notificationSettings.userId,
+          set: { ...settingsData, updatedAt: new Date() }
+        })
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
       throw error;
     }
   }

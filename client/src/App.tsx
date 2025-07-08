@@ -11,6 +11,7 @@ import EmailDetail from "@/pages/email-detail";
 import Chat from "@/pages/chat";
 import Memories from "@/pages/memories";
 import Folders from "@/pages/folders";
+import Digest from "@/pages/digest";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
           <Route path="/chat" component={Chat} />
           <Route path="/memories" component={Memories} />
           <Route path="/folders" component={Folders} />
+          <Route path="/digest" component={Digest} />
         </>
       )}
       <Route component={NotFound} />

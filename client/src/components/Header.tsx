@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain } from "lucide-react";
+import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain, Folder, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
@@ -72,6 +72,26 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
             >
               <Brain className="w-4 h-4 mr-2" />
               Memories
+            </Button>
+
+            <Button
+              onClick={() => window.location.href = "/folders"}
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <Folder className="w-4 h-4 mr-2" />
+              Folders
+            </Button>
+
+            <Button
+              onClick={() => window.location.href = "/digest"}
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Digest
             </Button>
             
             <Button

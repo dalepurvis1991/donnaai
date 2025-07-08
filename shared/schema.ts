@@ -192,3 +192,38 @@ export const folderRules = pgTable("folder_rules", {
 
 export type FolderRule = typeof folderRules.$inferSelect;
 export type InsertFolderRule = typeof folderRules.$inferInsert;
+
+// Daily digest system
+export const dailyDigests = pgTable("daily_digests", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  date: timestamp("date").notNull(), // Date this digest covers
+  totalEmails: integer("total_emails").default(0),
+  salesCount: integer("sales_count").default(0),
+  salesTotal: text("sales_total"), // Store as string to handle currency
+  productBreakdown: jsonb("product_breakdown").default('{}'), // {"smoked oak": 5, "walnut": 3}
+  keyMetrics: jsonb("key_metrics").default('{}'), // Store extracted business metrics
+  summary: text("summary"), // Generated AI summary
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type DailyDigest = typeof dailyDigests.$inferSelect;
+export type InsertDailyDigest = typeof dailyDigests.$inferInsert;
+
+// Notification preferences
+export const notificationSettings = pgTable("notification_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  digestEnabled: boolean("digest_enabled").default(true),
+  digestTime: varchar("digest_time").default("09:00"), // Time in HH:MM format
+  timezone: varchar("timezone").default("UTC"),
+  includeSalesMetrics: boolean("include_sales_metrics").default(true),
+  includeEmailCounts: boolean("include_email_counts").default(true),
+  includeTopSenders: boolean("include_top_senders").default(true),
+  customKeywords: text("custom_keywords").array().default([]), // Keywords to track
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
