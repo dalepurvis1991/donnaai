@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 
 interface Email {
   id: number;
@@ -165,7 +165,7 @@ export default function EmailDetail() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {formatDistanceToNow(new Date(email.date), { addSuffix: true })}
+                  {email.date && isValid(new Date(email.date)) ? formatDistanceToNow(new Date(email.date), { addSuffix: true }) : 'No date'}
                 </div>
               </div>
             </div>

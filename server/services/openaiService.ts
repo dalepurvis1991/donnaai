@@ -127,7 +127,6 @@ Consider:
       reasoning: "Default categorization - requires review"
     };
   }
-}
 
   async generateChatResponse(systemPrompt: string, userMessage: string): Promise<string> {
     try {
