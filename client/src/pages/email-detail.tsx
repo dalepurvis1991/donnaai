@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail } from "lucide-react";
+import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail, Bot, Sparkles, Zap } from "lucide-react";
 import { formatDistanceToNow, isValid } from "date-fns";
 
 interface Email {
@@ -28,6 +28,8 @@ export default function EmailDetail() {
   const [replyText, setReplyText] = useState("");
   const [newCategory, setNewCategory] = useState<string>("");
   const [showReply, setShowReply] = useState(false);
+  const [showDraftSuggestion, setShowDraftSuggestion] = useState(false);
+  const [draftSuggestion, setDraftSuggestion] = useState<any>(null);
 
   const emailId = params.id;
 
@@ -122,6 +124,33 @@ export default function EmailDetail() {
     },
   });
 
+  // Draft assistant mutation
+  const draftMutation = useMutation({
+    mutationFn: async (userInput?: string) => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/draft`, {
+        userInput: userInput || "",
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setDraftSuggestion(data);
+      setShowDraftSuggestion(true);
+      setReplyText(data.body);
+      setShowReply(true);
+      toast({
+        title: "AI Draft Generated",
+        description: `Generated ${data.tone} reply with ${data.confidence}% confidence.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate AI draft. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return <div className="p-6">Loading email...</div>;
   }
@@ -172,6 +201,14 @@ export default function EmailDetail() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                onClick={() => draftMutation.mutate()}
+                disabled={draftMutation.isPending}
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                {draftMutation.isPending ? "Generating..." : "AI Draft"}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setShowReply(!showReply)}
               >
                 <Reply className="h-4 w-4 mr-2" />
@@ -184,7 +221,7 @@ export default function EmailDetail() {
           <div 
             className="prose max-w-none"
             dangerouslySetInnerHTML={{ 
-              __html: email.body.replace(/\n/g, '<br>') 
+              __html: (email.body || 'No content available').replace(/\n/g, '<br>') 
             }}
           />
         </CardContent>
@@ -200,6 +237,41 @@ export default function EmailDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show AI draft suggestion if available */}
+            {showDraftSuggestion && draftSuggestion && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    AI Draft Suggestion ({draftSuggestion.confidence}% confidence, {draftSuggestion.tone} tone)
+                  </span>
+                </div>
+                <p className="text-sm text-blue-700 italic">
+                  {draftSuggestion.reasoning}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setReplyText(draftSuggestion.body);
+                      setShowDraftSuggestion(false);
+                    }}
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    Use Draft
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowDraftSuggestion(false)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <Textarea
               placeholder="Type your reply..."
               value={replyText}

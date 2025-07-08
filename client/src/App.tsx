@@ -9,6 +9,7 @@ import Landing from "@/pages/landing";
 import Settings from "@/pages/settings";
 import EmailDetail from "@/pages/email-detail";
 import Chat from "@/pages/chat";
+import Memories from "@/pages/memories";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/email/:id" component={EmailDetail} />
           <Route path="/chat" component={Chat} />
+          <Route path="/memories" component={Memories} />
         </>
       )}
       <Route component={NotFound} />

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, RefreshCw, LogOut, Settings, MessageCircle } from "lucide-react";
+import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
@@ -62,6 +62,16 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Chat
+            </Button>
+            
+            <Button
+              onClick={() => window.location.href = "/memories"}
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              Memories
             </Button>
             
             <Button

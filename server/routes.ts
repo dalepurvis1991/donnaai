@@ -206,7 +206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/calendar/refresh", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -246,7 +250,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API routes
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
       const settings = await storage.getUserSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -257,7 +264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
       const settings = await storage.updateUserSettings(userId, req.body);
       res.json(settings);
     } catch (error) {
@@ -268,7 +278,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/settings/rules", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const { type, value, category, confidence } = req.body;
       
       const settings = await storage.getUserSettings(userId);
@@ -316,7 +330,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/emails/:id/reply", isAuthenticated, async (req: any, res) => {
     try {
       const { to, subject, body } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const user = await storage.getUser(userId);
       
       if (!user?.googleAccessToken) {
@@ -334,10 +352,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Memory/Vector API routes
+  app.get("/api/memories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      const { vectorService } = await import("./services/vectorService");
+      const memories = await vectorService.getUserMemories(userId);
+      res.json(memories);
+    } catch (error) {
+      console.error("Error fetching memories:", error);
+      res.status(500).json({ message: "Failed to fetch memories" });
+    }
+  });
+
+  app.get("/api/memories/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { q: query } = req.query;
+      
+      if (!query) {
+        return res.json([]);
+      }
+      
+      const { vectorService } = await import("./services/vectorService");
+      const results = await vectorService.searchMemories(query as string, userId);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching memories:", error);
+      res.status(500).json({ message: "Failed to search memories" });
+    }
+  });
+
+  app.post("/api/memories/index", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { vectorService } = await import("./services/vectorService");
+      
+      // Index all user emails
+      await vectorService.indexAllUserEmails(userId);
+      
+      res.json({ message: "Indexing completed successfully" });
+    } catch (error) {
+      console.error("Error indexing memories:", error);
+      res.status(500).json({ message: "Failed to index memories" });
+    }
+  });
+
+  app.post("/api/memories/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      
+      const { vectorService } = await import("./services/vectorService");
+      const noteId = `note-${Date.now()}`;
+      
+      await vectorService.indexNote(noteId, content, userId);
+      
+      res.json({ message: "Note added successfully", noteId });
+    } catch (error) {
+      console.error("Error adding note:", error);
+      res.status(500).json({ message: "Failed to add note" });
+    }
+  });
+
   // Chat API routes
   app.get("/api/chat/messages", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
       const messages = await storage.getChatMessages(userId);
       res.json(messages);
     } catch (error) {
@@ -348,19 +451,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/chat/send", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const { content } = req.body;
+      
+      if (!content || content.trim() === "") {
+        return res.status(400).json({ message: "Message content is required" });
+      }
       
       // Store user message
       await storage.createChatMessage({
         userId,
         role: "user",
-        content,
+        content: content.trim(),
       });
 
       // Generate AI response using RAG
       const { ragService } = await import("./services/ragService");
-      const aiResponse = await ragService.processUserMessage(userId, content);
+      const aiResponse = await ragService.processUserMessage(userId, content.trim());
       
       // Store AI response
       await storage.createChatMessage({
@@ -373,6 +484,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing chat message:", error);
       res.status(500).json({ message: "Failed to process message" });
+    }
+  });
+
+  // Draft assistant route
+  app.post("/api/emails/:id/draft", isAuthenticated, async (req: any, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const { userInput } = req.body;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { draftAssistantService } = await import("./services/draftAssistantService");
+      const draft = await draftAssistantService.generateReply(emailId, userId, userInput);
+      
+      res.json(draft);
+    } catch (error) {
+      console.error("Error generating draft:", error);
+      res.status(500).json({ message: "Failed to generate draft" });
     }
   });
 
