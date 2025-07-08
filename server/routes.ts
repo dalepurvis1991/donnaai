@@ -117,10 +117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Email refresh request - User check:', {
         hasUser: !!req.user,
-        userId: req.user?.claims?.sub
+        userId: req.user?.id
       });
       
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -182,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calendar routes
   app.get("/api/calendar/events", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const events = await storage.getCalendarEvents(userId);
       res.json(events);
     } catch (error) {
@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/calendar/refresh", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
