@@ -20,6 +20,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Google OAuth for Gmail/Calendar access
   setupGoogleAuth(app);
 
+  // Debug route to test callback URL
+  app.get('/api/test-callback', (req, res) => {
+    res.json({ 
+      message: 'Callback endpoint is reachable',
+      hostname: req.hostname,
+      url: req.url,
+      query: req.query
+    });
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
