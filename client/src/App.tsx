@@ -12,6 +12,7 @@ import Chat from "@/pages/chat";
 import Memories from "@/pages/memories";
 import Folders from "@/pages/folders";
 import Digest from "@/pages/digest";
+import BulkProcessing from "@/pages/bulk-processing";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
           <Route path="/memories" component={Memories} />
           <Route path="/folders" component={Folders} />
           <Route path="/digest" component={Digest} />
+          <Route path="/bulk-processing" component={BulkProcessing} />
         </>
       )}
       <Route component={NotFound} />

@@ -137,6 +137,10 @@ Changelog:
 - July 08, 2025. **CRITICAL NAVIGATION FIX**: Resolved issue where users were trapped in chat function without navigation
 - July 08, 2025. Added "Back to Dashboard" buttons to all secondary pages: chat, folders, digest, memories, and settings
 - July 08, 2025. Enhanced user experience with consistent navigation patterns across all Baron features
+- July 08, 2025. **DIGEST GENERATION FIXED**: Corrected API request format for digest generation functionality
+- July 08, 2025. **BULK EMAIL PROCESSING FEATURE**: Added pro user feature to process 1000 emails for enhanced AI learning context
+- July 08, 2025. **RESPONSIVE NAVIGATION MENU**: Implemented mobile-first navigation with three-line menu button for tablet/mobile views
+- July 08, 2025. Created bulk processing page with Progress component and Alert components for better user experience
 
 ## User Preferences
 

@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain, Folder, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain, Folder, BarChart3, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 interface HeaderProps {
   connectionStatus: "connected" | "disconnected";
@@ -12,6 +14,7 @@ interface HeaderProps {
 
 export default function Header({ connectionStatus, onRefresh, isRefreshing }: HeaderProps) {
   const { user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const handleLogout = () => {
     window.location.href = '/api/logout';
@@ -26,6 +29,15 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
     }
     return 'U';
   };
+
+  const navigationItems = [
+    { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: MessageCircle, label: "Chat", href: "/chat" },
+    { icon: Folder, label: "Folders", href: "/folders" },
+    { icon: BarChart3, label: "Digest", href: "/digest" },
+    { icon: Brain, label: "Memories", href: "/memories" },
+    { icon: Mail, label: "Bulk Processing", href: "/bulk-processing" },
+  ];
 
   return (
     <header className="bg-white border-b border-slate-200 shadow-sm">
@@ -42,6 +54,54 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-2">
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.href}
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => window.location.href = item.href}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <Dialog open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Navigation</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-2">
+                    {navigationItems.map((item) => (
+                      <Button
+                        key={item.href}
+                        variant="ghost"
+                        className="justify-start gap-3"
+                        onClick={() => {
+                          window.location.href = item.href;
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
             {/* Connection Status */}
             <div className="flex items-center space-x-2">
               <div 

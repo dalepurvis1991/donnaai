@@ -76,11 +76,10 @@ export default function Digest() {
 
   // Generate digest mutation
   const generateDigestMutation = useMutation({
-    mutationFn: (hoursBack: number) => 
-      apiRequest("/api/digest/generate", {
-        method: "POST",
-        body: { hoursBack }
-      }),
+    mutationFn: async (hoursBack: number) => {
+      const response = await apiRequest("POST", "/api/digest/generate", { hoursBack });
+      return response.json();
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/digest/history"] });
       toast({
@@ -99,11 +98,10 @@ export default function Digest() {
 
   // Update notification settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: (settings: Partial<NotificationSettings>) =>
-      apiRequest("/api/notifications/settings", {
-        method: "PUT",
-        body: settings
-      }),
+    mutationFn: async (settings: Partial<NotificationSettings>) => {
+      const response = await apiRequest("PUT", "/api/notifications/settings", settings);
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/settings"] });
       setIsSettingsOpen(false);

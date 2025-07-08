@@ -434,6 +434,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk email processing route (Pro feature)
+  app.post("/api/emails/bulk-process", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const { limit = 1000 } = req.body;
+      
+      // Fetch large batch of emails from Gmail
+      const emails = await gmailApiService.fetchEmailsInBatch(req.user, limit);
+      
+      // Process for RAG system
+      const { ragService } = await import("./services/ragService");
+      await ragService.processEmailsForLearning(userId, emails);
+      
+      res.json({ 
+        processed: emails.length, 
+        message: `Successfully processed ${emails.length} emails for learning` 
+      });
+    } catch (error) {
+      console.error("Error processing bulk emails:", error);
+      res.status(500).json({ message: "Failed to process bulk emails" });
+    }
+  });
+
   // Chat API routes
   app.get("/api/chat/messages", isAuthenticated, async (req: any, res) => {
     try {

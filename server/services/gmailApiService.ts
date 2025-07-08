@@ -203,6 +203,48 @@ export class GmailApiService {
       return false;
     }
   }
+
+  async fetchEmailsInBatch(user: User, limit: number = 1000): Promise<InsertEmail[]> {
+    try {
+      const gmail = this.getGmailClient(user);
+      
+      // Get list of messages with higher limit
+      const listResponse = await gmail.users.messages.list({
+        userId: 'me',
+        maxResults: limit,
+        q: 'in:inbox OR in:sent -in:spam -in:trash'
+      });
+
+      const messages = listResponse.data.messages || [];
+      const emails: InsertEmail[] = [];
+
+      // Process messages in batches of 10 to avoid rate limits
+      const batchSize = 10;
+      for (let i = 0; i < messages.length; i += batchSize) {
+        const batch = messages.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(async (message) => {
+          try {
+            return await this.getEmailDetails(gmail, message.id!);
+          } catch (error) {
+            console.error(`Error fetching email ${message.id}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        emails.push(...batchResults.filter(Boolean) as InsertEmail[]);
+        
+        // Small delay to avoid hitting rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      return emails;
+    } catch (error) {
+      console.error('Error fetching emails in batch:', error);
+      throw error;
+    }
+  }
 }
 
 export const gmailApiService = new GmailApiService();
