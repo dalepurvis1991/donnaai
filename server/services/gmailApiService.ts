@@ -51,7 +51,7 @@ export class GmailApiService {
             format: 'full',
           });
 
-          const email = this.parseGmailMessage(emailDetail.data);
+          const email = await this.parseGmailMessage(emailDetail.data);
           if (email) {
             emails.push(email);
           }
@@ -71,7 +71,7 @@ export class GmailApiService {
     }
   }
 
-  private parseGmailMessage(message: any): InsertEmail | null {
+  private async parseGmailMessage(message: any): Promise<InsertEmail | null> {
     try {
       const headers = message.payload?.headers || [];
       
@@ -105,8 +105,8 @@ export class GmailApiService {
         body = Buffer.from(message.payload.body.data, 'base64').toString();
       }
 
-      // Categorize the email
-      const category = this.categorizeEmail(subject, body, sender);
+      // Categorize the email using AI
+      const category = await this.categorizeEmail(subject, body, sender, senderEmail);
 
       return {
         subject,
@@ -128,7 +128,21 @@ export class GmailApiService {
     return header?.value;
   }
 
-  private categorizeEmail(subject: string, body: string, sender: string): string {
+  private async categorizeEmail(subject: string, body: string, sender: string, senderEmail: string): Promise<string> {
+    // Import dynamically to avoid circular dependencies
+    const { openaiService } = await import('./openaiService');
+    
+    try {
+      const result = await openaiService.categorizeEmail(subject, body, sender, senderEmail);
+      console.log(`Email categorized as ${result.category} (confidence: ${result.confidence}): ${result.reasoning}`);
+      return result.category;
+    } catch (error) {
+      console.error('AI categorization failed, using fallback:', error);
+      return this.fallbackCategorization(subject, body, sender);
+    }
+  }
+
+  private fallbackCategorization(subject: string, body: string, sender: string): string {
     const content = `${subject} ${body} ${sender}`.toLowerCase();
 
     // Keywords for each category
