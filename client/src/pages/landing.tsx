@@ -4,6 +4,7 @@ import { Mail, Zap, Shield, ArrowRight } from "lucide-react";
 
 export default function Landing() {
   const handleLogin = () => {
+    console.log('Login button clicked - redirecting to /api/login');
     window.location.href = '/api/login';
   };
 

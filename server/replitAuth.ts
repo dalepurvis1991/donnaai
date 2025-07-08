@@ -55,8 +55,7 @@ function updateUserSession(
 }
 
 async function upsertUser(
-  claims: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+  claims: any
 ) {
   await storage.upsertUser({
     id: claims["sub"],
@@ -64,8 +63,6 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    googleAccessToken: tokens.access_token,
-    googleRefreshToken: tokens.refresh_token,
   });
 }
 
@@ -83,17 +80,18 @@ export async function setupAuth(app: Express) {
   ) => {
     const user = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims(), tokens);
+    await upsertUser(tokens.claims());
     verified(null, user);
   };
 
   for (const domain of process.env
     .REPLIT_DOMAINS!.split(",")) {
+    console.log(`Setting up Replit OAuth for domain: ${domain}`);
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
         config,
-        scope: "openid email profile offline_access https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
+        scope: "openid email profile offline_access",
         callbackURL: `https://${domain}/api/callback`,
       },
       verify,
@@ -105,9 +103,10 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    console.log(`Login request from: ${req.hostname}`);
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/calendar.readonly"],
+      scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
