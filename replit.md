@@ -1,8 +1,8 @@
-# Baron - Email Assistant
+# Donna AI - Email Assistant
 
 ## Overview
 
-Baron is a modern email management and categorization application built with a React frontend and Express.js backend. The system automatically categorizes emails into three main types: FYI (informational), Draft (requiring action), and Forward (to be shared). It integrates with Gmail via IMAP to fetch and process emails, providing users with a clean dashboard interface to manage their email workflow.
+Donna AI is a modern email management and categorization application built with a React frontend and Express.js backend. The system automatically categorizes emails into three main types: FYI (informational), Draft (requiring action), and Forward (to be shared). It integrates with Gmail via IMAP to fetch and process emails, providing users with a clean dashboard interface to manage their email workflow.
 
 ## System Architecture
 
@@ -150,6 +150,10 @@ Changelog:
 - July 09, 2025. Added correlation service with OpenAI integration for comparing quotes and analyzing order progress
 - July 09, 2025. Created correlations page with detailed view of grouped emails and AI-generated business recommendations
 - July 09, 2025. Database schema updated with email_correlations table, API routes added for correlation management
+- July 09, 2025. **REBRANDING COMPLETE**: Baron officially rebranded to Donna AI for www.donnaai.co.uk deployment
+- July 09, 2025. Updated all UI components, page titles, and branding references from Baron to Donna AI
+- July 09, 2025. Created deployment guide for production launch on custom domain
+- July 09, 2025. **READY FOR PRODUCTION**: All features tested and working, prepared for public testing at www.donnaai.co.uk
 
 ## User Preferences
 

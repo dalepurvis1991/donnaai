@@ -97,7 +97,7 @@ export default function Chat() {
         </Button>
         <div className="h-6 w-px bg-border" />
         <MessageCircle className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Chat with Baron</h1>
+        <h1 className="text-2xl font-bold">Chat with Donna AI</h1>
         <Badge variant="outline" className="ml-2">
           <Sparkles className="h-3 w-3 mr-1" />
           AI Assistant

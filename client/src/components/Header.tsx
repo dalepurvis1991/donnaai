@@ -50,8 +50,8 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
               <Mail className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Baron</h1>
-              <p className="text-xs text-slate-500">Email Assistant</p>
+              <h1 className="text-xl font-semibold text-slate-900">Donna AI</h1>
+              <p className="text-xs text-slate-500">Your Intelligent Assistant</p>
             </div>
           </div>
           

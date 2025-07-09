@@ -152,7 +152,7 @@ export default function Correlations() {
           <div className="col-span-full">
             <Alert>
               <AlertDescription>
-                No email correlations found yet. Baron will automatically detect related emails as they arrive.
+                No email correlations found yet. Donna AI will automatically detect related emails as they arrive.
               </AlertDescription>
             </Alert>
           </div>

@@ -32,10 +32,10 @@ export default function Landing() {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Welcome to Baron
+            Welcome to Donna AI
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Your intelligent email assistant that automatically organizes your Gmail into 
+            Your intelligent assistant that automatically organizes your Gmail into 
             FYI, Draft, and Forward categories. Take control of your inbox today.
           </p>
         </div>
