@@ -281,3 +281,21 @@ export const taskComments = pgTable("task_comments", {
 
 export type TaskComment = typeof taskComments.$inferSelect;
 export type InsertTaskComment = typeof taskComments.$inferInsert;
+
+// Email correlations for grouping related emails (quotes, invoices, etc)
+export const emailCorrelations = pgTable("email_correlations", {
+  id: serial("id").primaryKey(),
+  groupId: varchar("group_id").notNull(), // UUID for the correlation group
+  emailId: integer("email_id").notNull().references(() => emails.id),
+  correlationType: varchar("correlation_type").notNull(), // 'quote', 'invoice', 'order', 'inquiry'
+  subject: varchar("subject").notNull(), // What the correlation is about
+  confidence: real("confidence").default(0.9), // AI confidence in the correlation
+  metadata: jsonb("metadata"), // Additional data like price, vendor, etc
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_email_correlations_group").on(table.groupId),
+  index("idx_email_correlations_email").on(table.emailId),
+]);
+
+export type EmailCorrelation = typeof emailCorrelations.$inferSelect;
+export type InsertEmailCorrelation = typeof emailCorrelations.$inferInsert;

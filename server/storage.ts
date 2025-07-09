@@ -1,6 +1,6 @@
-import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, dailyDigests, notificationSettings, tasks, taskComments, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule, type DailyDigest, type InsertDailyDigest, type NotificationSettings, type InsertNotificationSettings, type Task, type InsertTask, type TaskComment, type InsertTaskComment } from "@shared/schema";
+import { emails, calendarEvents, users, userSettings, chatMessages, emailFolders, emailFolderAssignments, folderRules, dailyDigests, notificationSettings, tasks, taskComments, emailCorrelations, type Email, type InsertEmail, type CalendarEvent, type InsertCalendarEvent, type User, type UpsertUser, type EmailFolder, type InsertEmailFolder, type EmailFolderAssignment, type InsertEmailFolderAssignment, type FolderRule, type InsertFolderRule, type DailyDigest, type InsertDailyDigest, type NotificationSettings, type InsertNotificationSettings, type Task, type InsertTask, type TaskComment, type InsertTaskComment, type EmailCorrelation, type InsertEmailCorrelation } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Email operations
@@ -65,6 +65,17 @@ export interface IStorage {
   // Task comments
   getTaskComments(taskId: number): Promise<TaskComment[]>;
   createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  
+  // Email correlations
+  createEmailCorrelations(correlations: InsertEmailCorrelation[]): Promise<void>;
+  getEmailCorrelationGroup(emailId: number): Promise<EmailCorrelation | undefined>;
+  getCorrelationsByGroup(groupId: string): Promise<EmailCorrelation[]>;
+  getUserCorrelationGroups(userId: string): Promise<Array<{
+    groupId: string;
+    subject: string;
+    correlationType: string;
+    emailCount: number;
+  }>>;
 }
 
 export class MemStorage implements IStorage {
@@ -555,6 +566,85 @@ export class DatabaseStorage implements IStorage {
   async createTaskComment(commentData: InsertTaskComment): Promise<TaskComment> {
     const [comment] = await db.insert(taskComments).values(commentData).returning();
     return comment;
+  }
+
+  // Email correlation methods
+  async createEmailCorrelations(correlations: InsertEmailCorrelation[]): Promise<void> {
+    try {
+      if (correlations.length > 0) {
+        await db.insert(emailCorrelations).values(correlations);
+      }
+    } catch (error) {
+      console.error("Error creating email correlations:", error);
+      throw error;
+    }
+  }
+
+  async getEmailCorrelationGroup(emailId: number): Promise<EmailCorrelation | undefined> {
+    try {
+      const [correlation] = await db
+        .select()
+        .from(emailCorrelations)
+        .where(eq(emailCorrelations.emailId, emailId));
+      return correlation;
+    } catch (error) {
+      console.error("Error getting email correlation group:", error);
+      throw error;
+    }
+  }
+
+  async getCorrelationsByGroup(groupId: string): Promise<EmailCorrelation[]> {
+    try {
+      return await db
+        .select()
+        .from(emailCorrelations)
+        .where(eq(emailCorrelations.groupId, groupId))
+        .orderBy(desc(emailCorrelations.createdAt));
+    } catch (error) {
+      console.error("Error getting correlations by group:", error);
+      throw error;
+    }
+  }
+
+  async getUserCorrelationGroups(userId: string): Promise<Array<{
+    groupId: string;
+    subject: string;
+    correlationType: string;
+    emailCount: number;
+  }>> {
+    try {
+      // Get all emails for this user
+      const userEmails = await db
+        .select({ id: emails.id })
+        .from(emails)
+        .innerJoin(users, eq(emails.senderEmail, users.email))
+        .where(eq(users.id, userId));
+      
+      const emailIds = userEmails.map(e => e.id);
+      
+      if (emailIds.length === 0) return [];
+      
+      // Get correlation groups for user's emails
+      const groups = await db
+        .select({
+          groupId: emailCorrelations.groupId,
+          subject: emailCorrelations.subject,
+          correlationType: emailCorrelations.correlationType,
+          emailCount: sql<number>`count(*)::int`
+        })
+        .from(emailCorrelations)
+        .where(sql`${emailCorrelations.emailId} = ANY(${emailIds})`)
+        .groupBy(
+          emailCorrelations.groupId,
+          emailCorrelations.subject,
+          emailCorrelations.correlationType
+        );
+      
+      return groups;
+    } catch (error) {
+      console.error("Error getting user correlation groups:", error);
+      throw error;
+    }
   }
 }
 

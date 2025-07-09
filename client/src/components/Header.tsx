@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain, Folder, BarChart3, Menu, X, CheckSquare } from "lucide-react";
+import { Mail, RefreshCw, LogOut, Settings, MessageCircle, Brain, Folder, BarChart3, Menu, X, CheckSquare, LinkIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
@@ -37,6 +37,7 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
     { icon: BarChart3, label: "Digest", href: "/digest" },
     { icon: Brain, label: "Memories", href: "/memories" },
     { icon: CheckSquare, label: "Tasks", href: "/tasks" },
+    { icon: LinkIcon, label: "Correlations", href: "/correlations" },
     { icon: Mail, label: "Bulk Processing", href: "/bulk-processing" },
   ];
 

@@ -7,6 +7,7 @@ import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
 import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
 import { digestService } from "./services/digestService";
 import { taskService } from "./services/taskService";
+import { correlationService } from "./services/correlationService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -257,9 +258,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailCount = req.body?.count || 50; // Default 50, allow user preference
       const newEmails = await gmailApiService.fetchUserEmails(user, emailCount);
       
-      // Store new emails
+      // Store new emails and detect correlations
+      const createdEmails = [];
       for (const email of newEmails) {
-        await storage.createEmail(email);
+        const createdEmail = await storage.createEmail(email);
+        createdEmails.push(createdEmail);
+      }
+      
+      // Detect correlations for new emails
+      const existingEmails = await storage.getEmails();
+      for (const email of createdEmails) {
+        if (email.id) {
+          const correlations = await correlationService.detectCorrelations(email, existingEmails);
+          if (correlations.length > 0) {
+            await storage.createEmailCorrelations(correlations);
+          }
+        }
       }
 
       const stats = await storage.getEmailStats();
@@ -779,6 +793,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching digest history:", error);
       res.status(500).json({ message: "Failed to fetch digest history" });
+    }
+  });
+
+  // Email correlation routes
+  app.get("/api/correlations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const groups = await correlationService.getCorrelationGroups(userId);
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching correlation groups:", error);
+      res.status(500).json({ message: "Failed to fetch correlation groups" });
+    }
+  });
+  
+  app.get("/api/correlations/:groupId", isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = req.params.groupId;
+      const correlations = await storage.getCorrelationsByGroup(groupId);
+      const analysis = await correlationService.analyzeCorrelationGroup(groupId);
+      
+      res.json({ correlations, analysis });
+    } catch (error) {
+      console.error("Error fetching correlation details:", error);
+      res.status(500).json({ message: "Failed to fetch correlation details" });
+    }
+  });
+  
+  app.post("/api/correlations", isAuthenticated, async (req: any, res) => {
+    try {
+      const { emailIds, correlationType, subject } = req.body;
+      
+      if (!emailIds || !Array.isArray(emailIds) || emailIds.length < 2) {
+        return res.status(400).json({ message: "At least 2 email IDs required" });
+      }
+      
+      const groupId = await correlationService.createManualCorrelation(
+        emailIds,
+        correlationType || "manual",
+        subject || "Manual correlation"
+      );
+      
+      res.json({ groupId, message: "Correlation created successfully" });
+    } catch (error) {
+      console.error("Error creating correlation:", error);
+      res.status(500).json({ message: "Failed to create correlation" });
     }
   });
 
