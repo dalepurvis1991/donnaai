@@ -775,17 +775,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         role: "user",
         content: content.trim(),
+        timestamp: new Date(),
       });
 
       // Generate AI response using RAG
       const { ragService } = await import("./services/ragService");
+      console.log('Processing chat message for user:', userId);
       const aiResponse = await ragService.processUserMessage(userId, content.trim());
       
       // Store AI response
       await storage.createChatMessage({
         userId,
-        role: "assistant",
+        role: "assistant", 
         content: aiResponse,
+        timestamp: new Date(),
       });
 
       res.json({ message: "Message sent successfully" });

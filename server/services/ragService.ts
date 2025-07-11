@@ -120,7 +120,9 @@ ${context.recentEmails.slice(0, 5).map(email =>
 
 Be helpful, contextually aware, and provide actionable insights. Reference specific emails or patterns when relevant.`;
 
-      const response = await openaiService.generateChatResponse(systemPrompt, message);
+      const response = await openaiService.generateChatResponse([
+        { role: "user", content: message }
+      ], systemPrompt);
       return response;
     } catch (error) {
       console.error("Error processing user message:", error);

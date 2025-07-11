@@ -162,10 +162,9 @@ Return JSON format:
 
 If no clear order data is found, return null.`;
 
-      const response = await openaiService.generateChatResponse(
-        "You are a data extraction expert. Extract order information from emails accurately. Return only valid JSON or null.",
-        prompt
-      );
+      const response = await openaiService.generateChatResponse([
+        { role: "user", content: prompt }
+      ], "You are a data extraction expert. Extract order information from emails accurately. Return only valid JSON or null.");
 
       try {
         const parsed = JSON.parse(response);
@@ -245,10 +244,9 @@ If no clear order data is found, return null.`;
 
 Write a friendly, business-focused summary in 2-3 sentences. Highlight key achievements and notable patterns.`;
 
-      const summary = await openaiService.generateChatResponse(
-        "You are a business analyst creating daily summaries. Be concise and focus on actionable insights.",
-        prompt
-      );
+      const summary = await openaiService.generateChatResponse([
+        { role: "user", content: prompt }
+      ], "You are a business analyst creating daily summaries. Be concise and focus on actionable insights.");
 
       return summary || this.generateFallbackSummary(metrics, hoursBack);
     } catch (error) {

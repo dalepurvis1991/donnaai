@@ -125,9 +125,12 @@ Respond with JSON containing:
 
   async generateChatResponse(messages: any[], systemPrompt?: string): Promise<string> {
     try {
+      // Ensure messages is an array and properly formatted
+      const messageArray = Array.isArray(messages) ? messages : [{ role: "user", content: String(messages) }];
+      
       const chatMessages = [
         ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
-        ...messages
+        ...messageArray
       ];
 
       const response = await openai.chat.completions.create({
