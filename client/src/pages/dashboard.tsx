@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/Header";
@@ -13,6 +13,7 @@ import type { EmailStats, CategorizedEmails } from "@shared/schema";
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Check Google connection status
   const { data: googleStatus, isLoading: googleStatusLoading, error: googleStatusError } = useQuery<{ 
@@ -153,7 +154,7 @@ export default function Dashboard() {
         />
 
         {/* Email Categories Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           <EmailColumn
             title="FYI"
             description="Newsletters, confirmations, updates"
@@ -161,6 +162,8 @@ export default function Dashboard() {
             emails={emails?.fyi || []}
             count={stats?.fyiCount || 0}
             isLoading={emailsLoading}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
           />
           
           <EmailColumn
@@ -170,6 +173,8 @@ export default function Dashboard() {
             emails={emails?.draft || []}
             count={stats?.draftCount || 0}
             isLoading={emailsLoading}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
           />
           
           <EmailColumn
@@ -179,6 +184,8 @@ export default function Dashboard() {
             emails={emails?.forward || []}
             count={stats?.forwardCount || 0}
             isLoading={emailsLoading}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
           />
         </div>
 

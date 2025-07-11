@@ -170,13 +170,13 @@ export class MemStorage implements IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getEmails(): Promise<Email[]> {
-    return await db.select().from(emails).orderBy(emails.date);
+    return await db.select().from(emails).orderBy(desc(emails.date));
   }
 
   async getEmailsByCategory(category: string): Promise<Email[]> {
     return await db.select().from(emails)
       .where(eq(emails.category, category))
-      .orderBy(emails.date);
+      .orderBy(desc(emails.date));
   }
 
   async createEmail(insertEmail: InsertEmail): Promise<Email> {

@@ -299,29 +299,38 @@ export default function EmailDetail() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => createTaskMutation.mutate()}
                 disabled={createTaskMutation.isPending}
+                className="flex-shrink-0"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{createTaskMutation.isPending ? "Creating..." : "Create Task"}</span>
+                <span className="sm:hidden">{createTaskMutation.isPending ? "..." : "Task"}</span>
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => draftMutation.mutate()}
                 disabled={draftMutation.isPending}
+                className="flex-shrink-0"
               >
-                <Bot className="h-4 w-4 mr-2" />
-                {draftMutation.isPending ? "Generating..." : "AI Draft"}
+                <Bot className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{draftMutation.isPending ? "Generating..." : "AI Draft"}</span>
+                <span className="sm:hidden">{draftMutation.isPending ? "..." : "AI"}</span>
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setShowReply(!showReply)}
+                className="flex-shrink-0"
               >
-                <Reply className="h-4 w-4 mr-2" />
-                Reply
+                <Reply className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Reply</span>
+                <span className="sm:hidden">Reply</span>
               </Button>
             </div>
           </div>
@@ -329,18 +338,44 @@ export default function EmailDetail() {
         <CardContent className="space-y-6">
           {/* Email Body Content */}
           <div className="space-y-3">
-            <h3 className="text-lg font-medium text-gray-900">Message Content</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Message Content</h3>
             <div 
-              className="bg-white border border-gray-200 p-6 rounded-lg text-sm leading-relaxed min-h-[200px]"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 rounded-lg text-sm leading-relaxed min-h-[200px]"
               style={{ whiteSpace: 'pre-wrap' }}
             >
-              {email.body ? (
-                <div dangerouslySetInnerHTML={{ __html: email.body.replace(/\n/g, '<br>') }} />
+              {email.body && email.body.trim() ? (
+                <div 
+                  className="text-gray-800 dark:text-gray-200"
+                  dangerouslySetInnerHTML={{ 
+                    __html: email.body
+                      .replace(/\n/g, '<br>')
+                      .replace(/\r\n/g, '<br>')
+                      .replace(/\r/g, '<br>')
+                  }} 
+                />
+              ) : email.content ? (
+                <div 
+                  className="text-gray-800 dark:text-gray-200"
+                  dangerouslySetInnerHTML={{ 
+                    __html: email.content
+                      .replace(/\n/g, '<br>')
+                      .replace(/\r\n/g, '<br>')
+                      .replace(/\r/g, '<br>')
+                  }} 
+                />
               ) : (
-                <div className="text-gray-500 italic text-center py-8">
+                <div className="text-gray-500 dark:text-gray-400 italic text-center py-8">
                   <Mail className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p>No message content available</p>
                   <p className="text-xs mt-1">This email may only contain attachments or HTML that couldn't be processed</p>
+                  {/* Debug info */}
+                  <details className="mt-4 text-left">
+                    <summary className="cursor-pointer text-xs">Debug Info</summary>
+                    <pre className="text-xs mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                      Body: {JSON.stringify(email.body, null, 2)}
+                      Content: {JSON.stringify(email.content, null, 2)}
+                    </pre>
+                  </details>
                 </div>
               )}
             </div>
