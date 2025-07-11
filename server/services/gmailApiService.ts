@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import type { InsertEmail, User } from '@shared/schema';
 
 export class GmailApiService {
-  async fetchUserEmails(user: User, count: number = 10): Promise<InsertEmail[]> {
+  async fetchUserEmails(user: User, count: number = 100): Promise<InsertEmail[]> {
     if (!user.googleAccessToken) {
       throw new Error('User has no Google access token');
     }

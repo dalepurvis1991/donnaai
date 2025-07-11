@@ -331,6 +331,24 @@ export default function Settings() {
             )}
           </div>
         </CardContent>
+        <div className="px-6 pb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button className="w-full">
+              Save Settings
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                fetch('/api/emails/refresh', { method: 'POST' })
+                  .then(() => window.location.reload())
+                  .catch(err => console.error('Refresh failed:', err));
+              }}
+            >
+              Refresh Emails
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );

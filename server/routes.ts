@@ -526,6 +526,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI draft reply
+  app.post("/api/emails/:id/draft", isAuthenticated, async (req: any, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const userId = req.user?.claims?.sub || req.user?.id;
+      
+      const email = await storage.getEmailById(emailId);
+      if (!email) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+
+      // Get business context from RAG service
+      let businessContext = "";
+      try {
+        const { ragService } = await import("./services/ragService");
+        const contextEmails = await ragService.searchSimilarEmails(userId, email.subject + " " + email.body, 5);
+        businessContext = contextEmails.map(e => `${e.subject}: ${e.body.substring(0, 200)}`).join("\n");
+      } catch (error) {
+        console.log("RAG context not available:", error.message);
+      }
+
+      const { openaiService } = await import("./services/openaiService");
+      const draft = await openaiService.generateDraftReply(
+        email.subject, 
+        email.body, 
+        email.sender,
+        businessContext
+      );
+      
+      res.json(draft);
+    } catch (error) {
+      console.error("Error generating draft:", error);
+      res.status(500).json({ message: "Failed to generate draft" });
+    }
+  });
+
+  // Create task from email
+  app.post("/api/emails/:id/create-task", isAuthenticated, async (req: any, res) => {
+    try {
+      const emailId = parseInt(req.params.id);
+      const userId = req.user?.claims?.sub || req.user?.id;
+      
+      const email = await storage.getEmailById(emailId);
+      if (!email) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+
+      const task = await storage.createTask({
+        userId,
+        title: `Follow up: ${email.subject}`,
+        description: `Email from ${email.sender}: ${email.body.substring(0, 200)}...`,
+        status: "pending",
+        priority: "medium",
+        category: "email_followup",
+        autoDetected: false,
+        emailId: emailId
+      });
+      
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
   // Memory/Vector API routes
   app.get("/api/memories", isAuthenticated, async (req: any, res) => {
     try {
@@ -816,6 +881,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching folder rules:", error);
       res.status(500).json({ message: "Failed to fetch folder rules" });
+    }
+  });
+
+  // Tasks API routes  
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const status = req.query.status as string;
+      const statuses = status && status !== "all" ? [status] : undefined;
+      const tasks = await storage.getUserTasks(userId, statuses);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await storage.getTaskById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const taskData = { ...req.body, userId };
+      const task = await storage.createTask(taskData);
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.put("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const updates = req.body;
+      const task = await storage.updateTask(taskId, updates);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      await storage.deleteTask(taskId);
+      res.json({ message: "Task deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
     }
   });
 

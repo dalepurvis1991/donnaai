@@ -185,6 +185,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearEmails(): Promise<void> {
+    // Clear correlations first to avoid foreign key constraint violations
+    await db.delete(emailCorrelations);
     await db.delete(emails);
   }
 

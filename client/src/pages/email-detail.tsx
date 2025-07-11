@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail, Bot, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail, Bot, Sparkles, Zap, Plus } from "lucide-react";
 import { formatDistanceToNow, isValid } from "date-fns";
 
 interface Email {
@@ -151,6 +151,27 @@ export default function EmailDetail() {
     },
   });
 
+  // Create task from email
+  const createTaskMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/create-task`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Task created",
+        description: `Task "${data.title}" has been created successfully.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -279,6 +300,14 @@ export default function EmailDetail() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => createTaskMutation.mutate()}
+                disabled={createTaskMutation.isPending}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => draftMutation.mutate()}
