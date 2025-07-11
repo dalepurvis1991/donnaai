@@ -1,8 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Zap, Shield, ArrowRight } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
+  const { toast } = useToast();
+
+  // Demo login mutation
+  const demoLoginMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/demo-login", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Demo Login Successful",
+        description: "You're now logged in with a demo account to test Donna AI.",
+      });
+      window.location.href = '/';
+    },
+    onError: () => {
+      toast({
+        title: "Demo Login Failed",
+        description: "Please try again or use Google login.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLogin = async () => {
     console.log('Login button clicked - redirecting to /api/login');
     console.log('Current location:', window.location.href);
@@ -85,7 +113,7 @@ export default function Landing() {
                 Sign in with your Google account to connect your Gmail and start organizing your emails.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <Button 
                 onClick={handleLogin}
                 size="lg"
@@ -99,6 +127,19 @@ export default function Landing() {
                 </svg>
                 Continue with Google
                 <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              
+              <div className="text-center text-sm text-gray-500">or</div>
+              
+              <Button 
+                onClick={() => demoLoginMutation.mutate()}
+                disabled={demoLoginMutation.isPending}
+                variant="outline"
+                size="lg"
+                className="w-full"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                {demoLoginMutation.isPending ? "Logging in..." : "Try Demo Version"}
               </Button>
             </CardContent>
           </Card>

@@ -142,6 +142,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug auth status
+  app.get('/api/auth/status', (req: any, res) => {
+    const session = req.session as any;
+    res.json({
+      hasSession: !!session,
+      sessionId: session?.id,
+      userId: session?.userId,
+      isAuthenticated: !!session?.userId,
+      sessionData: session ? Object.keys(session) : []
+    });
+  });
+
+  // Demo user for testing (temporary)
+  app.post('/api/auth/demo-login', async (req, res) => {
+    try {
+      const demoUser = await storage.upsertUser({
+        id: 'demo-user-123',
+        email: 'demo@donnaai.co.uk',
+        name: 'Demo User',
+        googleAccessToken: '',
+        googleRefreshToken: ''
+      });
+
+      // Set session
+      (req.session as any).userId = demoUser.id;
+      
+      console.log('Demo user logged in:', demoUser.email);
+      
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session failed' });
+        }
+        res.json({ success: true, user: demoUser });
+      });
+    } catch (error) {
+      console.error('Demo login error:', error);
+      res.status(500).json({ error: 'Demo login failed' });
+    }
+  });
+
 
   // Health check endpoint
   app.get("/api/health", isAuthenticated, async (req: any, res) => {
