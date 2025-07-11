@@ -38,6 +38,43 @@ Always respond with valid JSON format.`,
     }
   }
 
+  async categorizeEmail(subject: string, body: string, sender: string, senderEmail: string): Promise<{ category: string; confidence: number; reasoning: string }> {
+    try {
+      const prompt = `Analyze this email and categorize it into one of three categories:
+      
+      Categories:
+      - FYI: Informational emails that don't require action (newsletters, updates, notifications)
+      - Draft: Emails requiring action, response, or follow-up (questions, requests, meetings)
+      - Forward: Emails that should be shared with team/others (important announcements, team updates)
+      
+      Email Details:
+      Subject: ${subject}
+      From: ${sender} (${senderEmail})
+      Body: ${body.substring(0, 500)}
+      
+      Respond with JSON containing:
+      - category: one of "FYI", "Draft", "Forward"
+      - confidence: percentage (0-100)
+      - reasoning: brief explanation`;
+
+      const response = await this.generateStructuredResponse(prompt, "email_categorization");
+      const result = JSON.parse(response);
+      
+      return {
+        category: result.category || "FYI",
+        confidence: result.confidence || 75,
+        reasoning: result.reasoning || "Default categorization"
+      };
+    } catch (error) {
+      console.error("Email categorization error:", error);
+      return {
+        category: "FYI",
+        confidence: 50,
+        reasoning: "Fallback categorization due to AI error"
+      };
+    }
+  }
+
   async generateChatResponse(messages: any[], systemPrompt?: string): Promise<string> {
     try {
       const chatMessages = [

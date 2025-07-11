@@ -317,15 +317,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdEmails.push(createdEmail);
       }
       
-      // Detect correlations for new emails
-      const existingEmails = await storage.getEmails();
-      for (const email of createdEmails) {
-        if (email.id) {
-          const correlations = await correlationService.detectCorrelations(email, existingEmails);
-          if (correlations.length > 0) {
-            await storage.createEmailCorrelations(correlations);
+      // Detect correlations for new emails (safely)
+      try {
+        const existingEmails = await storage.getEmails();
+        for (const email of createdEmails) {
+          if (email.id && existingEmails.length > 0) {
+            const correlations = await correlationService.detectCorrelations(email, existingEmails);
+            if (correlations.length > 0) {
+              // Validate email IDs exist before creating correlations
+              const validCorrelations = correlations.filter(c => 
+                existingEmails.some(e => e.id === c.emailId)
+              );
+              if (validCorrelations.length > 0) {
+                await storage.createEmailCorrelations(validCorrelations);
+              }
+            }
           }
         }
+      } catch (correlationError) {
+        console.log("Correlation detection skipped:", correlationError.message);
       }
 
       const stats = await storage.getEmailStats();
