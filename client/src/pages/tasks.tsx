@@ -16,7 +16,8 @@ import {
   CircleDashed,
   Calendar,
   User,
-  DollarSign
+  DollarSign,
+  CheckSquare
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -51,9 +52,9 @@ export default function Tasks() {
   const queryClient = useQueryClient();
 
   // Fetch tasks
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const { data: tasks = [], isLoading, error } = useQuery<Task[]>({
     queryKey: ["/api/tasks", selectedStatus === "all" ? undefined : selectedStatus],
-    queryFn: () => apiRequest(`/api/tasks${selectedStatus !== "all" ? `?status=${selectedStatus}` : ""}`),
+    enabled: true,
   });
 
   // Update task status
@@ -126,63 +127,102 @@ export default function Tasks() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <h1 className="text-3xl font-bold">Job Tracker</h1>
+      <div className="min-h-screen bg-slate-50">
+        <header className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-3">
+                <Link to="/">
+                  <Button variant="ghost" size="sm">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                </Link>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <CheckSquare className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
+                  <p className="text-xs text-slate-500">Loading...</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="text-center py-12">
-            <div className="text-lg">Loading tasks...</div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <Alert variant="destructive">
+      <div className="min-h-screen bg-slate-50">
+        <header className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-3">
+                <Link to="/">
+                  <Button variant="ghost" size="sm">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                </Link>
+                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-pink-600 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
+                  <p className="text-xs text-slate-500">Error loading tasks</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Failed to load tasks. Please try again.
             </AlertDescription>
           </Alert>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold">Job Tracker</h1>
-            <Badge variant="secondary" className="text-sm">
-              {tasks.length} total tasks
-            </Badge>
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Link to="/">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Button>
+              </Link>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <CheckSquare className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
+                <p className="text-xs text-slate-500">{tasks.length} total tasks</p>
+              </div>
+            </div>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
         </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Status Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -342,7 +382,7 @@ export default function Tasks() {
             ))
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

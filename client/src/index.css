@@ -24,9 +24,9 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
   
-  /* Baron specific colors */
-  --baron-blue: hsl(220, 91%, 60%);
-  --baron-indigo: hsl(243, 75%, 59%);
+  /* Donna AI specific colors */
+  --donna-blue: hsl(220, 91%, 60%);
+  --donna-indigo: hsl(243, 75%, 59%);
 }
 
 .dark {
@@ -64,23 +64,23 @@
 }
 
 @layer utilities {
-  .text-baron-blue {
-    color: var(--baron-blue);
+  .text-donna-blue {
+    color: var(--donna-blue);
   }
   
-  .text-baron-indigo {
-    color: var(--baron-indigo);
+  .text-donna-indigo {
+    color: var(--donna-indigo);
   }
   
-  .bg-baron-blue {
-    background-color: var(--baron-blue);
+  .bg-donna-blue {
+    background-color: var(--donna-blue);
   }
   
-  .bg-baron-indigo {
-    background-color: var(--baron-indigo);
+  .bg-donna-indigo {
+    background-color: var(--donna-indigo);
   }
   
-  .border-baron-blue {
-    border-color: var(--baron-blue);
+  .border-donna-blue {
+    border-color: var(--donna-blue);
   }
 }

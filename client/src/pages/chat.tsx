@@ -83,33 +83,45 @@ export default function Chat() {
   ];
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => window.location.href = "/"}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-        <div className="h-6 w-px bg-border" />
-        <MessageCircle className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Chat with Donna AI</h1>
-        <Badge variant="outline" className="ml-2">
-          <Sparkles className="h-3 w-3 mr-1" />
-          AI Assistant
-        </Badge>
-      </div>
+      <header className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = "/"}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900">Chat with Donna AI</h1>
+                <p className="text-xs text-slate-500">Your Intelligent Assistant</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="hidden sm:flex">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI Assistant
+            </Badge>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* Chat Container */}
-      <Card className="h-[600px] flex flex-col">
+      <Card className="h-[70vh] flex flex-col">
         <CardHeader className="border-b">
           <CardTitle className="text-lg">Email Assistant Chat</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Ask Baron about your emails, get insights, and manage your inbox intelligently
+            Ask Donna AI about your emails, get insights, and manage your inbox intelligently
           </p>
         </CardHeader>
 
@@ -208,7 +220,7 @@ export default function Chat() {
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
                   </div>
-                  Baron is thinking...
+                  Donna AI is thinking...
                 </div>
               </div>
             </div>
@@ -221,7 +233,7 @@ export default function Chat() {
         <div className="border-t p-4">
           <form onSubmit={handleSendMessage} className="flex gap-2">
             <Textarea
-              placeholder="Ask Baron about your emails..."
+              placeholder="Ask Donna AI about your emails..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyPress}
@@ -241,6 +253,7 @@ export default function Chat() {
           </p>
         </div>
       </Card>
+      </main>
     </div>
   );
 }

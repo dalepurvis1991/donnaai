@@ -68,8 +68,15 @@ export default function StatsOverview({ stats, isLoading }: StatsOverviewProps) 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Last Updated</p>
-              <p className="text-2xl font-semibold text-slate-900">
-                {stats?.lastUpdated || 'Never'}
+              <p className="text-sm font-medium text-slate-700">
+                {stats?.lastUpdated && stats.lastUpdated !== 'Never' 
+                  ? new Date(stats.lastUpdated).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  : 'Never'}
               </p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">

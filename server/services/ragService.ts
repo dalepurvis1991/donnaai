@@ -87,7 +87,7 @@ export class RAGService {
       const relevantMemories = await vectorService.searchMemories(message, userId, 10);
       
       // Enhanced system prompt with folder capabilities
-      const systemPrompt = `You are Baron, an intelligent email management assistant with deep business context awareness and folder management capabilities.
+      const systemPrompt = `You are Donna AI, an intelligent email management assistant with deep business context awareness and folder management capabilities.
 
 BUSINESS CONTEXT (from ${context.recentEmails.length} emails):
 - Email volume: ${context.recentEmails.length} recent emails analyzed

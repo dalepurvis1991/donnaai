@@ -1,7 +1,7 @@
-# Baron - Email Assistant Business Functionality
+# Donna AI - Email Assistant Business Functionality
 
 ## Core Value Proposition
-Baron is an AI-powered email management platform that transforms chaotic inboxes into organized, actionable business intelligence. It automatically categorizes emails, tracks business tasks, and provides daily insights to help entrepreneurs and small businesses stay on top of their operations.
+Donna AI is an AI-powered email management platform that transforms chaotic inboxes into organized, actionable business intelligence. It automatically categorizes emails, tracks business tasks, and provides daily insights to help entrepreneurs and small businesses stay on top of their operations.
 
 ## Key Features for Business Plan
 

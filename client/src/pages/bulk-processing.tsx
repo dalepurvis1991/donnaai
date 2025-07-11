@@ -81,7 +81,7 @@ export default function BulkProcessing() {
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          This feature processes large batches of emails to build comprehensive context for Baron's AI learning system. 
+          This feature processes large batches of emails to build comprehensive context for Donna AI's learning system. 
           This improves response quality and understanding of your email patterns.
         </AlertDescription>
       </Alert>

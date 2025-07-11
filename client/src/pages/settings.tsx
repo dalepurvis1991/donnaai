@@ -162,7 +162,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle>General Preferences</CardTitle>
           <CardDescription>
-            Configure how Baron should categorize your emails
+            Configure how Donna AI should categorize your emails
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
