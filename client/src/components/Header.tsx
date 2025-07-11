@@ -117,56 +117,6 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
             </div>
             
             <Button
-              onClick={() => window.location.href = "/chat"}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Chat
-            </Button>
-            
-            <Button
-              onClick={() => window.location.href = "/memories"}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <Brain className="w-4 h-4 mr-2" />
-              Memories
-            </Button>
-
-            <Button
-              onClick={() => window.location.href = "/folders"}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <Folder className="w-4 h-4 mr-2" />
-              Folders
-            </Button>
-
-            <Button
-              onClick={() => window.location.href = "/digest"}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Digest
-            </Button>
-            
-            <Button
-              onClick={() => window.location.href = "/settings"}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </Button>
-            
-            <Button
               onClick={onRefresh}
               disabled={isRefreshing}
               variant="outline"
