@@ -223,6 +223,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk process emails for learning context
+  app.post("/api/emails/bulk-process", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user?.googleAccessToken) {
+        return res.status(400).json({ 
+          message: "Gmail access not granted. Please log in again to grant Gmail permission." 
+        });
+      }
+
+      const { limit = 1000 } = req.body;
+      
+      // Clear existing emails first
+      await storage.clearEmails();
+      
+      // Fetch large number of emails for learning context
+      const { gmailApiService } = await import("./services/gmailApiService");
+      const newEmails = await gmailApiService.fetchUserEmails(user, limit);
+      
+      // Store new emails and process for learning
+      const createdEmails = [];
+      for (const email of newEmails) {
+        const createdEmail = await storage.createEmail(email);
+        createdEmails.push(createdEmail);
+      }
+      
+      // Index emails for vector search
+      try {
+        const { vectorService } = await import("./services/vectorService");
+        await vectorService.indexAllUserEmails(userId);
+      } catch (error) {
+        console.log("Vector indexing not available:", error.message);
+      }
+      
+      res.json({ 
+        message: "Bulk processing completed successfully", 
+        processed: newEmails.length,
+        limit 
+      });
+    } catch (error) {
+      console.error('Bulk processing error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to process emails in bulk" 
+      });
+    }
+  });
+
   // Refresh emails from Gmail
   app.post("/api/emails/refresh", isAuthenticated, async (req: any, res) => {
     try {

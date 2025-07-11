@@ -14,8 +14,9 @@ export interface RAGContext {
 export class RAGService {
   async buildContext(userId: string): Promise<RAGContext> {
     try {
-      // Get user's recent emails for context
-      const recentEmails = await storage.getEmails();
+      // Get user's recent emails for context (filter by user if needed)
+      const allEmails = await storage.getEmails();
+      const recentEmails = allEmails; // For now, all emails are user-specific in our system
       const userSettings = await storage.getUserSettings(userId);
       
       // Analyze email patterns

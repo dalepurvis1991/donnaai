@@ -297,13 +297,25 @@ export default function EmailDetail() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div 
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ 
-              __html: (email.body || 'No content available').replace(/\n/g, '<br>') 
-            }}
-          />
+        <CardContent className="space-y-6">
+          {/* Email Body Content */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium text-gray-900">Message Content</h3>
+            <div 
+              className="bg-white border border-gray-200 p-6 rounded-lg text-sm leading-relaxed min-h-[200px]"
+              style={{ whiteSpace: 'pre-wrap' }}
+            >
+              {email.body ? (
+                <div dangerouslySetInnerHTML={{ __html: email.body.replace(/\n/g, '<br>') }} />
+              ) : (
+                <div className="text-gray-500 italic text-center py-8">
+                  <Mail className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p>No message content available</p>
+                  <p className="text-xs mt-1">This email may only contain attachments or HTML that couldn't be processed</p>
+                </div>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

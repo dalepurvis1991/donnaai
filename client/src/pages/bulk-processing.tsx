@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Mail, 
@@ -21,10 +22,27 @@ import {
 } from "lucide-react";
 
 export default function BulkProcessing() {
-  const [emailLimit, setEmailLimit] = useState(1000);
+  const [emailLimit, setEmailLimit] = useState([1000]);
   const [processedCount, setProcessedCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const { toast } = useToast();
+
+  // Auto-refresh emails every 15 minutes
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        await apiRequest("POST", "/api/emails/refresh", {});
+        console.log("Auto-refresh: Emails updated");
+      } catch (error) {
+        console.error("Auto-refresh failed:", error);
+      }
+    }, 15 * 60 * 1000); // 15 minutes
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   const bulkProcessMutation = useMutation({
     mutationFn: async (limit: number) => {
@@ -52,7 +70,7 @@ export default function BulkProcessing() {
   const handleBulkProcess = () => {
     setIsProcessing(true);
     setProcessedCount(0);
-    bulkProcessMutation.mutate(emailLimit);
+    bulkProcessMutation.mutate(emailLimit[0]);
   };
 
   return (
@@ -98,21 +116,41 @@ export default function BulkProcessing() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <Label htmlFor="email-limit">Number of Emails to Process</Label>
-              <Input
-                id="email-limit"
-                type="number"
-                value={emailLimit}
-                onChange={(e) => setEmailLimit(Number(e.target.value))}
-                min="100"
-                max="5000"
-                className="mt-2"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Recommended: 1000 emails for optimal learning context
+              <Label htmlFor="email-limit">Number of Emails to Process: {emailLimit[0]}</Label>
+              <div className="mt-4 space-y-2">
+                <Slider
+                  value={emailLimit}
+                  onValueChange={setEmailLimit}
+                  max={1000}
+                  min={100}
+                  step={50}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>100</span>
+                  <span className="font-medium">{emailLimit[0]} emails</span>
+                  <span>1000</span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                More emails = better AI context and understanding of your patterns
               </p>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium">Auto-refresh emails</p>
+                <p className="text-xs text-muted-foreground">Automatically fetch new emails every 15 minutes</p>
+              </div>
+              <Button
+                variant={autoRefresh ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+              >
+                {autoRefresh ? "On" : "Off"}
+              </Button>
             </div>
 
             <div className="flex items-center gap-4">

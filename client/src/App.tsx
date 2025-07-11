@@ -1,6 +1,8 @@
 import { Switch, Route } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +23,26 @@ function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   console.log('Router - Auth State:', { isAuthenticated, isLoading, hasUser: !!user });
+
+  // Global auto-refresh functionality - refresh emails every 15 minutes when authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    
+    const autoRefreshEmails = async () => {
+      try {
+        await apiRequest("POST", "/api/emails/refresh", {});
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        console.log("Auto-refresh: Emails updated successfully");
+      } catch (error) {
+        console.error("Auto-refresh failed:", error);
+      }
+    };
+
+    // Initial fetch and then every 15 minutes
+    const interval = setInterval(autoRefreshEmails, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user]);
 
   return (
     <Switch>
