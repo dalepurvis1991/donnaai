@@ -7,12 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 interface HeaderProps {
-  connectionStatus: "connected" | "disconnected";
-  onRefresh: () => void;
-  isRefreshing: boolean;
+  emailStatus: "connected" | "disconnected" | "refreshing";
 }
 
-export default function Header({ connectionStatus, onRefresh, isRefreshing }: HeaderProps) {
+export default function Header({ emailStatus }: HeaderProps) {
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -104,28 +102,19 @@ export default function Header({ connectionStatus, onRefresh, isRefreshing }: He
               </Dialog>
             </div>
 
-            {/* Connection Status */}
+            {/* Email Status Indicator */}
             <div className="flex items-center space-x-2">
-              <div 
-                className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'
-                }`}
-              />
-              <span className="text-sm text-slate-600">
-                {connectionStatus === 'connected' ? 'Connected to Gmail' : 'Gmail Disconnected'}
-              </span>
+              <div className="relative">
+                <Mail className="w-5 h-5 text-slate-600" />
+                <div 
+                  className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                    emailStatus === 'connected' ? 'bg-emerald-500' : 
+                    emailStatus === 'refreshing' ? 'bg-amber-500' : 
+                    'bg-red-500'
+                  }`}
+                />
+              </div>
             </div>
-            
-            <Button
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
 
             {/* User Menu */}
             <DropdownMenu>

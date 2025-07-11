@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/Header";
@@ -50,7 +51,7 @@ export default function Dashboard() {
     enabled: googleStatus?.connected === true,
   });
 
-  // Refresh emails mutation
+  // Background refresh emails mutation (non-blocking)
   const refreshMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/emails/refresh");
@@ -60,33 +61,33 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/emails/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/emails/categorized"] });
       queryClient.invalidateQueries({ queryKey: ["/api/health"] });
-      toast({
-        title: "Emails refreshed",
-        description: `Fetched ${data.count} new emails successfully.`,
-      });
+      // Silent success - no toast to avoid interrupting user
     },
     onError: (error) => {
-      toast({
-        title: "Refresh failed",
-        description: error instanceof Error ? error.message : "Failed to refresh emails",
-        variant: "destructive",
-      });
+      // Only show error toast for manual refresh, not background refresh
+      console.error("Background refresh failed:", error);
     },
   });
 
-  const handleRefresh = () => {
-    refreshMutation.mutate();
+  // Determine email status for header
+  const getEmailStatus = () => {
+    if (refreshMutation.isPending) return "refreshing";
+    if (googleStatus?.connected && healthCheck?.emailConnection === "connected") return "connected";
+    return "disconnected";
   };
+
+  // Auto-trigger background refresh on initial load if connected
+  useEffect(() => {
+    if (googleStatus?.connected && !refreshMutation.isPending) {
+      refreshMutation.mutate();
+    }
+  }, [googleStatus?.connected]);
 
   // Show Google connection screen if not connected
   if (!googleStatusLoading && googleStatus && !googleStatus.connected) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <Header 
-          connectionStatus="disconnected"
-          onRefresh={() => {}}
-          isRefreshing={false}
-        />
+        <Header emailStatus="disconnected" />
         
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="max-w-2xl mx-auto">
@@ -135,7 +136,7 @@ export default function Dashboard() {
     );
   }
 
-  const isLoading = statsLoading || emailsLoading || refreshMutation.isPending;
+  const isLoading = statsLoading || emailsLoading;
   const connectionStatus = 
     healthCheck?.emailConnection === "connected" && 
     healthCheck?.calendarConnection === "connected" 
@@ -143,11 +144,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header 
-        connectionStatus={connectionStatus}
-        onRefresh={handleRefresh}
-        isRefreshing={refreshMutation.isPending}
-      />
+      <Header emailStatus={getEmailStatus()} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <StatsOverview 
@@ -185,17 +182,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-8 flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-baron-blue"></div>
-              <p className="text-slate-600">
-                {refreshMutation.isPending ? "Fetching latest emails..." : "Loading..."}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* No blocking loading overlay - app stays interactive */}
       </main>
     </div>
   );
