@@ -8,6 +8,7 @@ import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
 import { digestService } from "./services/digestService";
 import { taskService } from "./services/taskService";
 import { correlationService } from "./services/correlationService";
+import { voiceService } from "./services/voiceService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -1118,6 +1119,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating notification settings:", error);
       res.status(500).json({ message: "Failed to update notification settings" });
     }
+  });
+
+  app.get('/api/voice', async (req, res) => {
+    const { text } = req.query;
+    const audio = await voiceService.generateSpeech(text);
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(audio);
   });
 
   const httpServer = createServer(app);

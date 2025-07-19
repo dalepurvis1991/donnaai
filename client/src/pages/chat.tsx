@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Send, Bot, User, MessageCircle, Sparkles, Mail, Calendar, ArrowLeft, Home } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Howl } from 'howler';
 
 interface ChatMessage {
   id: number;
