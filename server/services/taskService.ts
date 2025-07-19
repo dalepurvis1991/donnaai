@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { openaiService } from "./openaiService";
+import { notificationService } from "./notificationService";
 
 export interface TaskDetectionResult {
   isTask: boolean;
@@ -230,6 +231,26 @@ Respond with JSON:
       }
     } catch (error) {
       console.error("Error processing email for tasks:", error);
+    }
+  }
+
+  async processMessageForTasks(messageId: number, messageContent: any, userId: string): Promise<void> {
+    // Similar to processEmailForTasks but for general messages
+    const taskDetection = await this.detectTaskFromMessage(messageId, messageContent, userId);
+    if (taskDetection.isTask && taskDetection.confidence > 0.7) {
+      await storage.createTask({ ...taskDetection, userId, detectedFromMessageId: messageId });
+    }
+    // Check for updates to existing tasks
+    const existingTasks = await storage.getUserTasks(userId, ["pending", "in_progress"]);
+    for (const task of existingTasks) {
+      const update = await this.updateTaskFromMessage(task.id, messageContent, userId);
+      if (update) {
+        await storage.updateTask(task.id, update);
+        if (update.status === "completed") {
+          // Trigger notification for confirmation
+          await notificationService.sendTaskCompletionNotification(userId, task.id);
+        }
+      }
     }
   }
 

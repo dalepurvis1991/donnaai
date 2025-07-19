@@ -20,6 +20,8 @@ import {
   CheckSquare
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Howl } from 'howler';
 
 interface Task {
   id: number;
@@ -50,6 +52,8 @@ interface Task {
 export default function Tasks() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const queryClient = useQueryClient();
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [taskToConfirm, setTaskToConfirm] = useState(null);
 
   // Fetch tasks
   const { data: tasks = [], isLoading, error } = useQuery<Task[]>({
@@ -124,6 +128,12 @@ export default function Tasks() {
     acc[task.status] = (acc[task.status] || 0) + 1;
     return acc;
   }, {});
+
+  const playVoice = (text) => {
+    // Use ElevenLabs API to generate audio, then play
+    const sound = new Howl({ src: ['/api/voice?text=' + encodeURIComponent(text)] });
+    sound.play();
+  };
 
   if (isLoading) {
     return (

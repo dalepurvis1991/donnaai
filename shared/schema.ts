@@ -299,3 +299,23 @@ export const emailCorrelations = pgTable("email_correlations", {
 
 export type EmailCorrelation = typeof emailCorrelations.$inferSelect;
 export type InsertEmailCorrelation = typeof emailCorrelations.$inferInsert;
+
+export const dataSources = pgTable("data_sources", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  sourceType: varchar("source_type").notNull(), // 'whatsapp', 'slack', 'erp', etc.
+  sourceName: varchar("source_name"),
+  config: jsonb("config"),
+  lastSynced: timestamp("last_synced"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  sourceId: integer("source_id").references(() => dataSources.id),
+  content: text("content").notNull(),
+  sender: varchar("sender"),
+  timestamp: timestamp("timestamp").notNull(),
+  metadata: jsonb("metadata"),
+});
