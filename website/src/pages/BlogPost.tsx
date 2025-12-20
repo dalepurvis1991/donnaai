@@ -11,20 +11,34 @@ const BlogPost = () => {
 
     const post = blogPosts.find(p => p.id === params?.id)
 
+    // Load all markdown files at build time
+    const posts = import.meta.glob('../content/blog/*.md', { query: '?raw', import: 'default' })
+
     useEffect(() => {
         if (!post) return
 
-        // Dynamically import the markdown file
-        fetch(`/src/content/blog/${post.id}.md`)
-            .then(res => res.text())
-            .then(text => {
+        const loadContent = async () => {
+            try {
+                // Construct the path key for the glob map
+                const path = `../content/blog/${post.id}.md`
+                const loader = posts[path]
+
+                if (!loader) {
+                    throw new Error('Post file not found')
+                }
+
+                // Call the loader function (it returns a Promise that resolves to the string content)
+                const text = await loader() as string
                 setContent(text)
                 setLoading(false)
-            })
-            .catch(() => {
+            } catch (err) {
+                console.error('Failed to load blog post:', err)
                 setContent('# Post not found\n\nThe content for this post could not be loaded.')
                 setLoading(false)
-            })
+            }
+        }
+
+        loadContent()
     }, [post])
 
     if (!post) {
