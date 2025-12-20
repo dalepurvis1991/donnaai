@@ -1,8 +1,10 @@
 import { Router, Route, Switch } from 'wouter'
 import Home from './pages/Home'
-import Odoo from './pages/Odoo'
+import Product from './pages/Product'
 import Pricing from './pages/Pricing'
-import Integrations from './pages/Integrations'
+import Security from './pages/Security'
+import Feedback from './pages/Feedback'
+import About from './pages/About'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
 import { Navbar, Footer } from './components/Shared'
@@ -29,10 +31,10 @@ const App = () => {
                             <Home />
                         </>
                     </Route>
-                    <Route path="/odoo">
+                    <Route path="/product">
                         <>
                             <ScrollToTop />
-                            <Odoo />
+                            <Product />
                         </>
                     </Route>
                     <Route path="/pricing">
@@ -41,10 +43,22 @@ const App = () => {
                             <Pricing />
                         </>
                     </Route>
-                    <Route path="/integrations">
+                    <Route path="/security">
                         <>
                             <ScrollToTop />
-                            <Integrations />
+                            <Security />
+                        </>
+                    </Route>
+                    <Route path="/feedback">
+                        <>
+                            <ScrollToTop />
+                            <Feedback />
+                        </>
+                    </Route>
+                    <Route path="/about">
+                        <>
+                            <ScrollToTop />
+                            <About />
                         </>
                     </Route>
                     <Route path="/blog/:id">
@@ -59,6 +73,7 @@ const App = () => {
                             <Blog />
                         </>
                     </Route>
+
                     {/* Fallback to Home */}
                     <Route>
                         <>
