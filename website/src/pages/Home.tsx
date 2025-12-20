@@ -113,7 +113,7 @@ const Features = () => (
                             { title: "Task Capture", desc: "\"To-do\" detection, owners, due dates, and logical dependencies." },
                             { title: "Reply Drafting", desc: "Fast, context-aware email drafts. You always approve before sending." },
                             { title: "Context Memory", desc: "Learns your projects and working relationships from email history." },
-                            { title: "Meeting Notes", desc: "Paste transcripts to extract actions. (Fathom integration coming soon)." }
+                            { title: "Meeting Notes", desc: "Paste transcripts to extract actions. (Fathom integration later)." }
                         ].map((f, i) => (
                             <div key={i} className="flex gap-4">
                                 <span className="material-symbols-outlined text-primary text-3xl mt-1">check</span>
@@ -160,7 +160,7 @@ const FAQ = () => (
             {[
                 { q: "Does Donna send emails automatically?", a: "Not by default—Donna drafts and you approve. You are always in control." },
                 { q: "What does Donna read?", a: "Your synced email content, in controlled batches. You choose what’s in scope." },
-                { q: "Can I add meeting notes?", a: "Yes—paste transcripts directly. Fathom integration is on the roadmap." }
+                { q: "Can I add meeting notes?", a: "Yes—paste transcripts directly. Fathom integration later." }
             ].map((item, i) => (
                 <div key={i} className="bg-slate-50 dark:bg-card-dark/50 p-6 rounded-2xl">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{item.q}</h3>

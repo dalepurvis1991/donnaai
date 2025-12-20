@@ -104,7 +104,7 @@ const Feedback = () => {
                         <RoadmapColumn
                             status="Under Review"
                             color="text-yellow-500"
-                            items={["Mobile app", "Voice commands", "CRM syncing"]}
+                            items={["Mobile app", "Voice commands", "More integrations coming after V1"]}
                         />
                         <RoadmapColumn
                             status="Shipped"

@@ -55,7 +55,7 @@ const Pricing = () => {
                         <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-border-dark">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Planned Features</p>
                             <ul className="space-y-3 opacity-60">
-                                {["Team workflows & delegation", "Advanced privacy controls", "More integrations", "Custom SLA"].map((item, i) => (
+                                {["Team workflows & delegation", "Advanced privacy controls", "More integrations coming after V1", "Custom SLA"].map((item, i) => (
                                     <li key={i} className="flex items-center gap-3 text-base dark:text-slate-300">
                                         <span className="material-symbols-outlined text-slate-400 text-[20px]">add_circle</span>
                                         <span>{item}</span>
