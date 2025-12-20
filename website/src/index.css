@@ -1,7 +1,20 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #194ff0;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #101522;
+  --color-card-dark: #1a1d24;
+  --color-border-dark: #282c39;
+
+  --font-display: "Inter", sans-serif;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+}
+
 :root {
-  --font-family: 'Inter', sans-serif;
   --primary: #194ff0;
   --background-dark: #101522;
   --card-dark: #1a1d24;
@@ -9,14 +22,30 @@
 }
 
 body {
-  font-family: var(--font-family);
-  @apply bg-[#f6f6f8] dark:bg-[#101522] text-slate-900 dark:text-slate-50 antialiased;
+  font-family: "Inter", sans-serif;
+  @apply bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased;
 }
 
-.bg-primary {
-  background-color: var(--primary);
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
 }
 
-.text-primary {
-  color: var(--primary);
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #101522;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3140;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
 }
