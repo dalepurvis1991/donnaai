@@ -23,7 +23,7 @@ const App = () => {
         <div className="min-h-screen bg-background-light dark:bg-background-dark selection:bg-primary/30 selection:text-white overflow-x-hidden flex flex-col">
             <Navbar />
 
-            <div className="flex-grow">
+            <div className="flex-grow pt-16">
                 <Switch>
                     <Route path="/">
                         <>
