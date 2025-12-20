@@ -152,5 +152,165 @@ export const blogPosts: BlogPost[] = [
         excerpt: "Inbox Zero isn’t about hitting 0 emails. It’s about controlling attention, extracting tasks, and closing loops—fast.",
         author: "Donna AI Team",
         image: "https://images.unsplash.com/photo-1512314889357-e157c22f9856?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "hidden-cost-email-overload",
+        title: "The Hidden Cost of Email Overload for Entrepreneurs and Executives",
+        date: "2025-12-20",
+        excerpt: "Email overload drains profit and focus. Learn the real cost and why delegating to an AI assistant pays off.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "how-email-assistant-saves-time",
+        title: "5 Ways an Email Personal Assistant Saves You Hours Each Week",
+        date: "2025-12-20",
+        excerpt: "Five practical ways an AI assistant summarises, drafts, and tracks tasks to save hours every week.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "ai-vs-virtual-assistant",
+        title: "Why an Email‑Based AI Beats a Traditional Virtual Assistant",
+        date: "2025-12-20",
+        excerpt: "Compare cost, availability, privacy, and scalability between AI email assistants and human VAs.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "reclaim-your-day-with-email-assistant",
+        title: "How Busy Executives Reclaim Their Day with an Email Assistant",
+        date: "2025-12-20",
+        excerpt: "Executives use AI assistants to cut noise, protect focus time, and ensure follow‑through.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "roi-of-email-assistant",
+        title: "The ROI of Investing £30/Month in an Email Personal Assistant",
+        date: "2025-12-20",
+        excerpt: "Crunch the numbers on time saved vs subscription cost and see why the ROI is clear.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "prioritise-your-inbox-with-ai",
+        title: "Prioritise Your Inbox: AI That Flags What Matters",
+        date: "2025-12-20",
+        excerpt: "Smart filtering highlights urgent, client, and decision‑making threads so you can ignore the rest.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "email-assistant-for-freelancers",
+        title: "Why Freelancers and Solo Businesses Need an Email Assistant",
+        date: "2025-12-20",
+        excerpt: "Solo operators can’t miss leads. An assistant flags opportunities and automates follow‑ups.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "deep-work-email-distractions",
+        title: "The Science of Deep Work: How Minimising Email Distraction Boosts Productivity",
+        date: "2025-12-20",
+        excerpt: "Understand attention residue and how batching email protects deep work blocks.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "email-meeting-transcripts",
+        title: "Combining Email and Meeting Transcripts: Staying on Top of Projects",
+        date: "2025-12-20",
+        excerpt: "Turn meeting transcripts into tasks and follow‑up emails in one workflow.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1577563908411-bd26ca4dd5b1?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "email-assistant-improves-client-relationships",
+        title: "How an Email Assistant Improves Client Relationships",
+        date: "2025-12-20",
+        excerpt: "Faster responses, consistent tone, and tracked commitments build client trust.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1555099962-4199c345e5dd?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "common-email-mistakes-and-ai-fixes",
+        title: "10 Mistakes You Make When Managing Email (and How AI Fixes Them)",
+        date: "2025-12-20",
+        excerpt: "Avoid the most common inbox mistakes with summaries, task tracking, and batching.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "work-life-balance-email-assistant",
+        title: "Setting Boundaries: Email Automation for Work‑Life Balance",
+        date: "2025-12-20",
+        excerpt: "Batch notifications, morning digests, and after‑hours rules help you disconnect.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1596524430615-b46475ddff6e?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "calendar-todo-integration",
+        title: "Integrating an Email Assistant with Your Calendar and To‑Do Lists",
+        date: "2025-12-20",
+        excerpt: "Link email tasks to calendars and daily agendas for a unified workflow.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "case-study-email-ai",
+        title: "Case Study: How a Small Business Saved 10 Hours per Week with an Email AI",
+        date: "2025-12-20",
+        excerpt: "A two‑person agency cut email time by 10 hours per week with AI summaries and drafts.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "prevent-missed-opportunities",
+        title: "Never Miss an Opportunity: The Assistant That Tracks Commitments",
+        date: "2025-12-20",
+        excerpt: "Open‑loop tracking captures every promise so follow‑ups never slip.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "trust-and-security-ai-email",
+        title: "Building Trust: Privacy and Security in AI Email Assistants",
+        date: "2025-12-20",
+        excerpt: "Local processing, encryption, and human‑in‑the‑loop workflows keep data safe.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "separate-personal-business-emails",
+        title: "Separate Work from Life: How an Assistant Differentiates Personal and Business Emails",
+        date: "2025-12-20",
+        excerpt: "Classification keeps personal messages out of business workflows and preserves tone.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "future-of-email-assistants",
+        title: "The Future of Work: Why Smart Email Assistants Are Here to Stay",
+        date: "2025-12-20",
+        excerpt: "Digital debt, privacy demands, and ROI make email assistants a lasting trend.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "evaluate-ai-email-assistants",
+        title: "How to Evaluate Email Assistants for Your Business: A Buyer’s Guide",
+        date: "2025-12-20",
+        excerpt: "A checklist for summarisation, task tracking, privacy, integrations, and pricing.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60"
+    },
+    {
+        id: "customising-email-assistant",
+        title: "Customising Your Email Assistant: Personalised Workflows and Preferences",
+        date: "2025-12-20",
+        excerpt: "Tailor tone, prompts, and rules so the assistant matches your workflow.",
+        author: "Donna AI Team",
+        image: "https://images.unsplash.com/photo-1577563908411-bd26ca4dd5b1?w=800&auto=format&fit=crop&q=60"
     }
 ]
