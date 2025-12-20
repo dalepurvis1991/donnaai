@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --font-family: 'Inter', sans-serif;
+  --primary: #194ff0;
+  --background-dark: #101522;
+  --card-dark: #1a1d24;
+  --border-dark: #282c39;
+}
+
+body {
+  font-family: var(--font-family);
+  @apply bg-[#f6f6f8] dark:bg-[#101522] text-slate-900 dark:text-slate-50 antialiased;
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.text-primary {
+  color: var(--primary);
+}

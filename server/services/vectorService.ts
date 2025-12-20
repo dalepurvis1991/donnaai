@@ -1,5 +1,7 @@
 import { openaiService } from "./openaiService";
 import { storage } from "../storage";
+import fs from "fs/promises";
+import path from "path";
 
 export interface VectorDocument {
   id: string;
@@ -21,8 +23,35 @@ export interface MemorySearchResult {
   score: number;
 }
 
+const STORAGE_PATH = path.join(process.cwd(), "data", "vector_store.json");
+
 export class VectorService {
   private memoryStore: Map<string, VectorDocument> = new Map();
+
+  constructor() {
+    this.loadFromFile();
+  }
+
+  private async loadFromFile() {
+    try {
+      await fs.mkdir(path.dirname(STORAGE_PATH), { recursive: true });
+      const data = await fs.readFile(STORAGE_PATH, "utf-8");
+      const parsed = JSON.parse(data);
+      this.memoryStore = new Map(Object.entries(parsed));
+      console.log(`Loaded ${this.memoryStore.size} memories from storage.`);
+    } catch (error) {
+      console.log("No existing vector store found, starting fresh.");
+    }
+  }
+
+  private async saveToFile() {
+    try {
+      const data = JSON.stringify(Object.fromEntries(this.memoryStore));
+      await fs.writeFile(STORAGE_PATH, data);
+    } catch (error) {
+      console.error("Error saving vector store:", error);
+    }
+  }
 
   async indexEmail(emailId: number, userId: string): Promise<void> {
     try {
@@ -43,12 +72,11 @@ export class VectorService {
         },
       };
 
-      // Generate embedding using OpenAI
-      const embedding = await this.generateEmbedding(document.text);
+      const embedding = await openaiService.generateEmbedding(document.text);
       document.embedding = embedding;
 
-      // Store in memory (in production, would use Pinecone/Weaviate)
       this.memoryStore.set(document.id, document);
+      await this.saveToFile();
     } catch (error) {
       console.error(`Error indexing email ${emailId}:`, error);
     }
@@ -66,10 +94,11 @@ export class VectorService {
         },
       };
 
-      const embedding = await this.generateEmbedding(document.text);
+      const embedding = await openaiService.generateEmbedding(document.text);
       document.embedding = embedding;
 
       this.memoryStore.set(document.id, document);
+      await this.saveToFile();
     } catch (error) {
       console.error(`Error indexing note ${noteId}:`, error);
     }
@@ -91,10 +120,11 @@ export class VectorService {
         },
       };
 
-      const embedding = await this.generateEmbedding(document.text);
+      const embedding = await openaiService.generateEmbedding(document.text);
       document.embedding = embedding;
 
       this.memoryStore.set(document.id, document);
+      await this.saveToFile();
     } catch (error) {
       console.error(`Error indexing conversation ${conversationId}:`, error);
     }
@@ -102,13 +132,13 @@ export class VectorService {
 
   async searchMemories(query: string, userId: string, limit: number = 5): Promise<MemorySearchResult[]> {
     try {
-      const queryEmbedding = await this.generateEmbedding(query);
-      
+      const queryEmbedding = await openaiService.generateEmbedding(query);
+
       const userDocuments = Array.from(this.memoryStore.values())
         .filter(doc => doc.metadata.userId === userId);
 
       const results: MemorySearchResult[] = [];
-      
+
       for (const doc of userDocuments) {
         if (doc.embedding) {
           const score = this.cosineSimilarity(queryEmbedding, doc.embedding);
@@ -133,12 +163,13 @@ export class VectorService {
 
   async deleteMemory(documentId: string): Promise<void> {
     this.memoryStore.delete(documentId);
+    await this.saveToFile();
   }
 
   async indexAllUserEmails(userId: string): Promise<void> {
     try {
       const emails = await storage.getEmails();
-      
+
       for (const email of emails) {
         await this.indexEmail(email.id, userId);
       }
@@ -147,48 +178,19 @@ export class VectorService {
     }
   }
 
-  private async generateEmbedding(text: string): Promise<number[]> {
-    try {
-      // In production, use OpenAI embeddings API
-      // For now, return a simple hash-based embedding
-      return this.simpleEmbedding(text);
-    } catch (error) {
-      console.error("Error generating embedding:", error);
-      return this.simpleEmbedding(text);
-    }
-  }
-
-  private simpleEmbedding(text: string): number[] {
-    // Simple embedding based on text characteristics
-    const words = text.toLowerCase().split(/\s+/);
-    const embedding = new Array(384).fill(0);
-    
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      for (let j = 0; j < word.length; j++) {
-        const charCode = word.charCodeAt(j);
-        embedding[charCode % 384] += 1;
-      }
-    }
-    
-    // Normalize
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    return magnitude > 0 ? embedding.map(val => val / magnitude) : embedding;
-  }
-
   private cosineSimilarity(a: number[], b: number[]): number {
     if (a.length !== b.length) return 0;
-    
+
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-    
+
     for (let i = 0; i < a.length; i++) {
       dotProduct += a[i] * b[i];
       normA += a[i] * a[i];
       normB += b[i] * b[i];
     }
-    
+
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 }

@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
+import { z } from "zod";
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY environment variable is not set");
@@ -8,32 +10,136 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Schemas for Structured Outputs
+export const CategorizationSchema = z.object({
+  category: z.enum(["FYI", "Draft", "Forward"]),
+  confidence: z.number().min(0).max(100),
+  reasoning: z.string(),
+});
+
+export const TaskDetectionSchema = z.object({
+  isTask: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  supplier: z.string().optional(),
+  amount: z.number().optional(),
+  orderNumber: z.string().optional(),
+  stages: z.array(z.object({
+    stage: z.string(),
+    completed: z.boolean()
+  })).optional(),
+  reasoning: z.string()
+});
+
+export const TaskUpdateSchema = z.object({
+  hasUpdate: z.boolean(),
+  confidence: z.number(),
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+  stages: z.array(z.object({
+    stage: z.string(),
+    completed: z.boolean(),
+    completedAt: z.string().optional(),
+    emailId: z.number().optional()
+  })),
+  orderNumber: z.string().optional(),
+  invoiceNumber: z.string().optional(),
+  amount: z.number().optional(),
+  completedAt: z.string().optional(),
+  reasoning: z.string()
+});
+
+export const SentimentSchema = z.object({
+  sentiment: z.enum(["positive", "negative", "neutral"]),
+  confidence: z.number().min(0).max(1),
+});
+
+export const DraftReplySchema = z.object({
+  reply: z.string(),
+  confidence: z.number().min(0).max(100),
+  tone: z.enum(["professional", "casual", "formal"]),
+  reasoning: z.string(),
+});
+
+export const QuoteAnalysisSchema = z.object({
+  bestOption: z.object({
+    vendor: z.string(),
+    price: z.number(),
+    reason: z.string()
+  }),
+  comparison: z.object({
+    priceRange: z.object({ min: z.number(), max: z.number() }),
+    vendors: z.array(z.object({
+      name: z.string(),
+      price: z.number(),
+      pros: z.array(z.string()),
+      cons: z.array(z.string()),
+      deliveryTime: z.string().optional(),
+      warranty: z.string().optional()
+    }))
+  }),
+  recommendation: z.string()
+});
+
+export const OrderTimelineSchema = z.object({
+  orderStatus: z.enum(["pending", "confirmed", "shipped", "delivered", "completed"]),
+  timeline: z.array(z.object({
+    date: z.string(),
+    event: z.string(),
+    details: z.string()
+  })),
+  nextAction: z.string(),
+  totalValue: z.number().optional()
+});
+
+export const CorrelationSchema = z.object({
+  correlations: z.array(z.object({
+    relatedEmailId: z.number(),
+    correlationType: z.enum(["quote", "invoice", "order", "inquiry", "response"]),
+    subject: z.string(),
+    confidence: z.number().min(0).max(1),
+    metadata: z.object({
+      price: z.number().optional(),
+      vendor: z.string().optional(),
+      product: z.string().optional(),
+      notes: z.string().optional()
+    })
+  }))
+});
+
 export class OpenAIService {
-  async generateStructuredResponse(prompt: string, context: string = "general"): Promise<string> {
+  async generateStructuredResponse<T>(
+    prompt: string,
+    context: string,
+    format: { type: string, zodSchema: z.ZodType<T>, name: string }
+  ): Promise<T> {
     try {
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      const response = await openai.chat.completions.create({
+      const response = await openai.beta.chat.completions.parse({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: `You are an expert AI assistant analyzing business emails for task and job tracking. 
-Context: ${context}
-Always respond with valid JSON format.`,
+            content: `You are an expert AI assistant analyzing business emails. Context: ${context}`,
           },
           {
             role: "user",
             content: prompt,
           },
         ],
-        response_format: { type: "json_object" },
-        temperature: 0.3, // Lower temperature for more consistent analysis
-        max_tokens: 1000,
+        response_format: zodResponseFormat(format.zodSchema, format.name),
+        temperature: 0.3,
       });
 
-      return response.choices[0].message.content || "{}";
+      const message = response.choices[0].message;
+      if (message.parsed) {
+        return message.parsed;
+      } else {
+        throw new Error("Refused to generate structured output");
+      }
     } catch (error) {
-      console.error("OpenAI API error:", error);
+      console.error("OpenAI Structured Output error:", error);
       throw new Error(`OpenAI service error: ${error.message}`);
     }
   }
@@ -58,37 +164,27 @@ Generate a reply that:
 - Acknowledges the email appropriately
 - Addresses any questions or requests
 - Maintains professional tone
-- Uses business context for personalization
+- Uses business context for personalization`;
 
-Respond with JSON containing:
-- reply: the email body text
-- confidence: percentage (0-100) based on context quality
-- tone: "professional", "casual", or "formal"  
-- reasoning: brief explanation of approach`;
-
-      const response = await this.generateStructuredResponse(prompt, "email_drafting");
-      const result = JSON.parse(response);
-      
-      return {
-        reply: result.reply || "Thank you for your email. I'll review the details and get back to you shortly.\n\nBest regards",
-        confidence: Math.max(70, result.confidence || 80), // Minimum 70% confidence with business context
-        tone: result.tone || "professional",
-        reasoning: result.reasoning || "Professional acknowledgment with business context integration"
-      };
+      return await this.generateStructuredResponse(prompt, "email_drafting", {
+        type: "json_schema",
+        zodSchema: DraftReplySchema,
+        name: "draft_reply"
+      });
     } catch (error) {
       console.error("Draft generation error:", error);
       return {
         reply: "Thank you for your email. I'll review the details and get back to you shortly.\n\nBest regards",
         confidence: 75,
         tone: "professional",
-        reasoning: "Fallback professional response"
+        reasoning: "Fallback professional response due to error"
       };
     }
   }
 
   async categorizeEmail(subject: string, body: string, sender: string, senderEmail: string): Promise<{ category: string; confidence: number; reasoning: string }> {
     try {
-      const prompt = `Analyze this email and categorize it into one of three categories:
+      const prompt = `Analyze this email and categorize it.
       
       Categories:
       - FYI: Informational emails that don't require action (newsletters, updates, notifications)
@@ -98,21 +194,13 @@ Respond with JSON containing:
       Email Details:
       Subject: ${subject}
       From: ${sender} (${senderEmail})
-      Body: ${body.substring(0, 500)}
-      
-      Respond with JSON containing:
-      - category: one of "FYI", "Draft", "Forward"
-      - confidence: percentage (0-100)
-      - reasoning: brief explanation`;
+      Body: ${body.substring(0, 500)}`;
 
-      const response = await this.generateStructuredResponse(prompt, "email_categorization");
-      const result = JSON.parse(response);
-      
-      return {
-        category: result.category || "FYI",
-        confidence: result.confidence || 75,
-        reasoning: result.reasoning || "Default categorization"
-      };
+      return await this.generateStructuredResponse(prompt, "email_categorization", {
+        type: "json_schema",
+        zodSchema: CategorizationSchema,
+        name: "categorization"
+      });
     } catch (error) {
       console.error("Email categorization error:", error);
       return {
@@ -125,9 +213,8 @@ Respond with JSON containing:
 
   async generateChatResponse(messages: any[], systemPrompt?: string): Promise<string> {
     try {
-      // Ensure messages is an array and properly formatted
       const messageArray = Array.isArray(messages) ? messages : [{ role: "user", content: String(messages) }];
-      
+
       const chatMessages = [
         ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
         ...messageArray
@@ -164,7 +251,7 @@ Respond with JSON containing:
       return response.choices[0].message.content || text.substring(0, maxLength);
     } catch (error) {
       console.error("OpenAI summarization error:", error);
-      return text.substring(0, maxLength); // Fallback to simple truncation
+      return text.substring(0, maxLength);
     }
   }
 
@@ -173,35 +260,27 @@ Respond with JSON containing:
     confidence: number;
   }> {
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `Analyze the sentiment of business emails. Respond with JSON in this format:
-            {
-              "sentiment": "positive|negative|neutral",
-              "confidence": number between 0 and 1
-            }`,
-          },
-          {
-            role: "user",
-            content: text,
-          },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-        max_tokens: 100,
+      return await this.generateStructuredResponse(text, "sentiment_analysis", {
+        type: "json_schema",
+        zodSchema: SentimentSchema,
+        name: "sentiment"
       });
-
-      const result = JSON.parse(response.choices[0].message.content || "{}");
-      return {
-        sentiment: result.sentiment || "neutral",
-        confidence: Math.max(0, Math.min(1, result.confidence || 0.5)),
-      };
     } catch (error) {
       console.error("Sentiment analysis error:", error);
       return { sentiment: "neutral", confidence: 0.5 };
+    }
+  }
+
+  async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      const response = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: text.replace(/\n/g, " "),
+      });
+      return response.data[0].embedding;
+    } catch (error) {
+      console.error("Error generating embedding:", error);
+      throw error;
     }
   }
 }

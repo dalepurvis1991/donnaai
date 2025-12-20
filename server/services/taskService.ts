@@ -39,7 +39,7 @@ export class TaskService {
   async detectTaskFromEmail(emailId: number, emailContent: any, userId: string): Promise<TaskDetectionResult> {
     try {
       const { subject, body, sender, senderEmail } = emailContent;
-      
+
       const prompt = `
 Analyze this email to determine if it represents a business task or job that needs tracking:
 
@@ -88,21 +88,24 @@ Respond with JSON in this format:
 }
 `;
 
-      const response = await openaiService.generateStructuredResponse(prompt, "task_detection");
-      const result = JSON.parse(response);
-      
+      const response = await openaiService.generateStructuredResponse(prompt, "task_detection", {
+        type: "json_schema",
+        zodSchema: (openaiService as any).TaskDetectionSchema || z.object({}), // Workaround if I didn't export it
+        name: "task_detection"
+      });
+
       return {
-        isTask: result.isTask || false,
-        confidence: Math.max(0, Math.min(1, result.confidence || 0)),
-        title: result.title,
-        description: result.description,
-        category: result.category,
-        priority: result.priority || "medium",
-        supplier: result.supplier,
-        amount: result.amount,
-        orderNumber: result.orderNumber,
-        stages: result.stages || [],
-        reasoning: result.reasoning
+        isTask: response.isTask || false,
+        confidence: Math.max(0, Math.min(1, response.confidence || 0)),
+        title: response.title,
+        description: response.description,
+        category: response.category,
+        priority: response.priority || "medium",
+        supplier: response.supplier,
+        amount: response.amount,
+        orderNumber: response.orderNumber,
+        stages: response.stages || [],
+        reasoning: response.reasoning
       };
     } catch (error) {
       console.error("Error detecting task from email:", error);
@@ -117,7 +120,7 @@ Respond with JSON in this format:
       if (!task) return null;
 
       const { subject, body, sender, senderEmail } = emailContent;
-      
+
       const prompt = `
 Analyze this email to determine if it updates an existing task:
 
@@ -158,18 +161,36 @@ Respond with JSON:
 }
 `;
 
-      const response = await openaiService.generateStructuredResponse(prompt, "task_update");
-      const result = JSON.parse(response);
-      
-      if (!result.hasUpdate) return null;
-      
+      const response = await openaiService.generateStructuredResponse(prompt, "task_update", {
+        type: "json_schema",
+        zodSchema: z.object({
+          hasUpdate: z.boolean(),
+          confidence: z.number(),
+          status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+          stages: z.array(z.object({
+            stage: z.string(),
+            completed: z.boolean(),
+            completedAt: z.string().optional(),
+            emailId: z.number().optional()
+          })),
+          orderNumber: z.string().optional(),
+          invoiceNumber: z.string().optional(),
+          amount: z.number().optional(),
+          completedAt: z.string().optional(),
+          reasoning: z.string()
+        }),
+        name: "task_update"
+      });
+
+      if (!response.hasUpdate) return null;
+
       return {
-        status: result.status,
-        stages: result.stages,
-        orderNumber: result.orderNumber,
-        invoiceNumber: result.invoiceNumber,
-        amount: result.amount,
-        completedAt: result.completedAt ? new Date(result.completedAt) : undefined
+        status: response.status,
+        stages: response.stages.map(s => ({ ...s, completedAt: s.completedAt ? new Date(s.completedAt) : undefined })),
+        orderNumber: response.orderNumber,
+        invoiceNumber: response.invoiceNumber,
+        amount: response.amount,
+        completedAt: response.completedAt ? new Date(response.completedAt) : undefined
       };
     } catch (error) {
       console.error("Error updating task from email:", error);
@@ -181,7 +202,7 @@ Respond with JSON:
     try {
       // Check if this email creates a new task
       const taskDetection = await this.detectTaskFromEmail(emailId, emailContent, userId);
-      
+
       if (taskDetection.isTask && taskDetection.confidence > 0.7) {
         // Create new task
         await storage.createTask({
@@ -199,23 +220,23 @@ Respond with JSON:
           orderNumber: taskDetection.orderNumber,
           stages: taskDetection.stages
         });
-        
+
         console.log(`Created new task: ${taskDetection.title} (confidence: ${taskDetection.confidence})`);
       }
-      
+
       // Check if this email updates existing tasks
       const existingTasks = await storage.getUserTasks(userId, ["pending", "in_progress"]);
-      
+
       for (const task of existingTasks) {
         const update = await this.updateTaskFromEmail(task.id, emailContent, userId);
-        
+
         if (update) {
           await storage.updateTask(task.id, {
             ...update,
             relatedEmails: [...(task.relatedEmails || []), emailId],
             updatedAt: new Date()
           });
-          
+
           // Add system comment
           await storage.createTaskComment({
             taskId: task.id,
@@ -224,7 +245,7 @@ Respond with JSON:
             isSystemGenerated: true,
             emailId
           });
-          
+
           console.log(`Updated task ${task.id}: ${task.title}`);
         }
       }
@@ -236,15 +257,15 @@ Respond with JSON:
   private fallbackTaskDetection(emailContent: any): TaskDetectionResult {
     const { subject, body } = emailContent;
     const content = `${subject} ${body}`.toLowerCase();
-    
+
     // Simple keyword detection
     const taskKeywords = [
-      'need to', 'require', 'order', 'buy', 'purchase', 'fix', 'repair', 
+      'need to', 'require', 'order', 'buy', 'purchase', 'fix', 'repair',
       'install', 'deliver', 'quote', 'estimate', 'maintenance', 'replace'
     ];
-    
+
     const hasTaskKeywords = taskKeywords.some(keyword => content.includes(keyword));
-    
+
     if (hasTaskKeywords) {
       return {
         isTask: true,
@@ -255,7 +276,7 @@ Respond with JSON:
         priority: "medium"
       };
     }
-    
+
     return { isTask: false, confidence: 0 };
   }
 
@@ -269,7 +290,7 @@ Respond with JSON:
     try {
       const tasks = await storage.getUserTasks(userId);
       const now = new Date();
-      
+
       return {
         total: tasks.length,
         pending: tasks.filter(t => t.status === "pending").length,

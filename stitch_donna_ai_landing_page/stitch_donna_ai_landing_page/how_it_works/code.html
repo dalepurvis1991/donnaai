@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>How It Works - Donna AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#194ff0",
+                        "primary-dark": "#123bb0",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101522",
+                        "card-dark": "#1a1f2e",
+                        "border-dark": "#282c39",
+                        "text-secondary": "#9ca3ba"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel {
+            background: rgba(26, 31, 46, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased overflow-x-hidden">
+<!-- Top Navigation -->
+<div class="fixed top-0 left-0 right-0 z-50 border-b border-border-dark bg-background-dark/80 backdrop-blur-md">
+<div class="layout-container flex h-full flex-col">
+<div class="flex flex-1 justify-center">
+<div class="layout-content-container flex flex-col max-w-[1200px] flex-1 px-4 lg:px-10">
+<header class="flex items-center justify-between whitespace-nowrap py-3">
+<div class="flex items-center gap-3 text-white">
+<div class="size-8 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined !text-[32px]">smart_toy</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Donna AI</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-end gap-8">
+<div class="flex items-center gap-8">
+<a class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">How It Works</a>
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-white transition-colors" href="#">Integrations</a>
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-white transition-colors" href="#">Security</a>
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-white transition-colors" href="#">Pricing</a>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary hover:bg-primary-dark transition-colors text-white text-sm font-bold leading-normal">
+<span class="truncate">Book Demo</span>
+</button>
+</div>
+</header>
+</div>
+</div>
+</div>
+</div>
+<!-- Hero Section -->
+<section class="relative pt-24 pb-12 lg:pt-32 lg:pb-16 px-4">
+<div class="max-w-[1200px] mx-auto text-center">
+<div class="inline-flex items-center gap-2 rounded-full border border-border-dark bg-card-dark px-3 py-1 mb-6">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-xs font-medium text-text-secondary">Donna Engine v2.0 is live</span>
+</div>
+<h1 class="text-white text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] tracking-[-0.02em] mb-6 max-w-4xl mx-auto">
+                From Chat to Action: <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">The Donna AI Engine</span>
+</h1>
+<p class="text-text-secondary text-lg md:text-xl font-normal leading-relaxed max-w-2xl mx-auto mb-10">
+                A transparent look at how Donna executes complex work across your business systems securely. No black boxes, just logic you can audit.
+            </p>
+<!-- Segmented Control for Examples -->
+<div class="flex justify-center mb-12">
+<div class="flex p-1 rounded-lg bg-card-dark border border-border-dark shadow-sm">
+<label class="group relative flex cursor-pointer items-center justify-center rounded-md px-4 py-2 transition-all">
+<input checked="" class="peer sr-only" name="example-toggle" type="radio" value="email-odoo"/>
+<span class="relative z-10 text-sm font-medium text-text-secondary peer-checked:text-white">Email to Odoo Task</span>
+<div class="absolute inset-0 z-0 scale-95 rounded-md bg-transparent transition-all peer-checked:scale-100 peer-checked:bg-primary/20 peer-checked:shadow-sm"></div>
+</label>
+<label class="group relative flex cursor-pointer items-center justify-center rounded-md px-4 py-2 transition-all">
+<input class="peer sr-only" name="example-toggle" type="radio" value="slack-crm"/>
+<span class="relative z-10 text-sm font-medium text-text-secondary peer-checked:text-white">Slack to CRM Update</span>
+<div class="absolute inset-0 z-0 scale-95 rounded-md bg-transparent transition-all peer-checked:scale-100 peer-checked:bg-primary/20 peer-checked:shadow-sm"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Process Timeline -->
+<section class="relative pb-24 px-4">
+<div class="max-w-[960px] mx-auto">
+<!-- Timeline Line Background -->
+<div class="absolute left-[32px] md:left-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-border-dark to-transparent -translate-x-1/2 hidden md:block"></div>
+<div class="space-y-16 relative">
+<!-- Step 1: Chat Interface -->
+<div class="relative grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+<!-- Icon Marker -->
+<div class="absolute left-[0px] md:left-1/2 top-0 md:top-8 -translate-x-1/2 z-10 bg-background-dark border border-border-dark rounded-full p-2 text-primary shadow-[0_0_15px_rgba(25,79,240,0.3)] hidden md:block">
+<span class="material-symbols-outlined">chat_bubble</span>
+</div>
+<div class="md:text-right md:pr-12 pt-2">
+<h3 class="text-xl font-bold text-white mb-2">1. Natural Language Input</h3>
+<p class="text-text-secondary">You speak naturally. Donna understands context, urgency, and specific business entities without rigid commands.</p>
+</div>
+<div class="md:pl-12">
+<div class="glass-panel rounded-xl p-6 shadow-lg max-w-md w-full ml-auto md:ml-0">
+<div class="flex items-end gap-3 justify-end">
+<div class="flex flex-col gap-1 items-end">
+<span class="text-text-secondary text-xs">Operational User</span>
+<div class="rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-white text-sm shadow-md">
+                                        Create a task for the Q3 report based on the latest email from Sarah about the budget.
+                                    </div>
+</div>
+<div class="size-8 rounded-full bg-gradient-to-br from-gray-500 to-gray-700 bg-cover bg-center shrink-0" data-alt="User Avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAE2MB61wzi1kSDLlyJXy4vYPyuDMCgXKjMjT_l4MqUYxXW8Mse1fPUxbMtkLfyxT96bEBKyk7_jiZ3mCUHjAFTa3X1lejdawhggIjdTlika2TKnErhc9DjdYdhBtp3sdhrGQyYVHS1R2zarcV38jlIfyn3ZhCULKybmoGawzD_ttokp7z_wfdKWKSn1Y5FPBXgrtRLjc6MmFpZ2h-pVuJPJL59r6jBxOctyWVG6UDaEPelbb02iHgWpJScQF7RWl5iXiHceCgzQmw');"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 2: Intent & Plan -->
+<div class="relative grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+<div class="absolute left-[0px] md:left-1/2 top-0 md:top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-background-dark border border-border-dark rounded-full p-2 text-text-secondary hidden md:block">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div class="md:order-2 md:pl-12">
+<h3 class="text-xl font-bold text-white mb-2">2. Intent &amp; Planning</h3>
+<p class="text-text-secondary">Donna decomposes the request into a structured plan, identifying necessary data sources and required actions.</p>
+</div>
+<div class="md:order-1 md:pr-12 flex justify-end">
+<div class="glass-panel rounded-xl p-5 shadow-lg w-full max-w-md border-l-2 border-l-purple-500">
+<div class="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
+<span class="text-xs font-mono text-purple-400">PLANNING_ENGINE.JSON</span>
+<span class="flex h-2 w-2 rounded-full bg-green-500"></span>
+</div>
+<div class="font-mono text-xs text-gray-300 leading-relaxed">
+<span class="text-purple-400">const</span> <span class="text-yellow-300">plan</span> = {<br/>
+                                  <span class="text-blue-300">intent</span>: <span class="text-green-300">"create_task"</span>,<br/>
+                                  <span class="text-blue-300">context</span>: {<br/>
+                                    <span class="text-blue-300">source</span>: <span class="text-green-300">"gmail_api"</span>,<br/>
+                                    <span class="text-blue-300">query</span>: <span class="text-green-300">"from:Sarah subject:budget"</span>,<br/>
+                                    <span class="text-blue-300">destination</span>: <span class="text-green-300">"odoo_tasks"</span><br/>
+                                  }<br/>
+                                }
+                            </div>
+</div>
+</div>
+</div>
+<!-- Step 3: Tool Calls -->
+<div class="relative grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+<div class="absolute left-[0px] md:left-1/2 top-0 md:top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-background-dark border border-border-dark rounded-full p-2 text-text-secondary hidden md:block">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<div class="md:text-right md:pr-12">
+<h3 class="text-xl font-bold text-white mb-2">3. Secure Tool Execution</h3>
+<p class="text-text-secondary">Donna connects to your stack via secure APIs. Data is retrieved, transformed, and prepared for the destination system.</p>
+</div>
+<div class="md:pl-12">
+<div class="glass-panel rounded-xl p-6 shadow-lg w-full max-w-md">
+<div class="flex items-center justify-between gap-4">
+<!-- Source -->
+<div class="flex flex-col items-center gap-2">
+<div class="size-12 rounded-lg bg-white flex items-center justify-center p-2 shadow-sm">
+<img alt="Gmail" class="w-full h-full object-contain" data-alt="Gmail Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALvdEAzl7gSKu6DWfk0rc8UFRNeuKkesycNYkOBBrawXW6ECbLq3jL62aWshv3LVETGs2KEHKsi7goOUa4ytl4chbWUmVu7SJU3_1_sWlWWWy8yHJ_1NQCaMF3qz0cv1GM9hhxgNHxc6ffkLPJB9kglMon3tzS42rB267GyHC_PCQXe6ngABqnoUMKsGEHnzcRQ-RZMEF1HSXR6IpEjCDPSKCd-EHFqbA7jc8_MrwSieOcKdpbnH-qZzMk3nJ-SPN1u0SlTBWT_uU"/>
+</div>
+<span class="text-[10px] font-mono text-text-secondary uppercase">Source</span>
+</div>
+<!-- Connection Animation -->
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-full h-[2px] bg-border-dark relative overflow-hidden rounded-full">
+<div class="absolute inset-0 w-1/2 bg-primary animate-[shimmer_1.5s_infinite] translate-x-[-100%]"></div>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-sm">lock</span>
+</div>
+<!-- Destination -->
+<div class="flex flex-col items-center gap-2">
+<div class="size-12 rounded-lg bg-white flex items-center justify-center p-2 shadow-sm">
+<img alt="Odoo" class="w-full h-full object-contain" data-alt="Odoo Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-K-RzUCq_uQjGDHP2QahZhE1LSESNNd4cYrptp0AJHyqlRvEnzJYX42680iaUWNGz6yAzYf1INasuXcZPdu9Wlb4tRtAZtsnSC-jJU09RVxLiEun-cDXoGms9ZOGM6xiXqFYiSMGwJbV2odXZcQ7ed7S_-xLYPMBK6GThogI5ASaBCggMWhGsm_Zln7cAsGjGSpTvoUa_sbMeGnLbBFPrZPMntIXSyMCwa4nDLuckJEH3AGsTsjzSPPr8mE5X4YIw-kWT_KRg9X0"/>
+</div>
+<span class="text-[10px] font-mono text-text-secondary uppercase">Destination</span>
+</div>
+</div>
+<div class="mt-4 bg-background-dark/50 rounded p-2 border border-white/5">
+<p class="text-xs text-text-secondary font-mono truncate">GET /messages/18e23... → POST /project/tasks</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 4: Confirmation -->
+<div class="relative grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+<div class="absolute left-[0px] md:left-1/2 top-0 md:top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-background-dark border border-border-dark rounded-full p-2 text-text-secondary hidden md:block">
+<span class="material-symbols-outlined">verified_user</span>
+</div>
+<div class="md:order-2 md:pl-12">
+<h3 class="text-xl font-bold text-white mb-2">4. Human-in-the-Loop</h3>
+<p class="text-text-secondary">Critical actions require explicit approval. You maintain control over what gets executed.</p>
+</div>
+<div class="md:order-1 md:pr-12 flex justify-end">
+<div class="glass-panel rounded-xl overflow-hidden shadow-lg w-full max-w-md border border-primary/30">
+<div class="bg-primary/10 px-4 py-3 border-b border-primary/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">error</span>
+<span class="text-xs font-bold text-primary uppercase tracking-wider">Approval Required</span>
+</div>
+<div class="p-5">
+<p class="text-sm text-white mb-4">I'm about to create a task in <strong>Odoo Project 'Q3 Reports'</strong> titled "Budget Review".</p>
+<div class="flex gap-3">
+<button class="flex-1 bg-primary hover:bg-primary-dark text-white text-xs font-bold py-2 px-4 rounded transition-colors">Approve</button>
+<button class="flex-1 bg-transparent border border-border-dark hover:bg-white/5 text-text-secondary text-xs font-medium py-2 px-4 rounded transition-colors">Deny</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 5: Audit Log -->
+<div class="relative grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+<div class="absolute left-[0px] md:left-1/2 top-0 md:top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-background-dark border border-border-dark rounded-full p-2 text-text-secondary hidden md:block">
+<span class="material-symbols-outlined">table_rows</span>
+</div>
+<div class="md:text-right md:pr-12">
+<h3 class="text-xl font-bold text-white mb-2">5. Audit Trail</h3>
+<p class="text-text-secondary">Every interaction is logged for compliance. See exactly who authorized what, and when.</p>
+</div>
+<div class="md:pl-12">
+<div class="w-full max-w-md bg-card-dark rounded-xl border border-border-dark overflow-hidden text-[11px] font-mono">
+<div class="grid grid-cols-[1fr_2fr_1fr] gap-2 px-4 py-2 border-b border-border-dark bg-white/5 text-text-secondary font-bold">
+<div>TIMESTAMP</div>
+<div>ACTION</div>
+<div>STATUS</div>
+</div>
+<div class="grid grid-cols-[1fr_2fr_1fr] gap-2 px-4 py-2 border-b border-border-dark text-gray-400">
+<div>14:02:35</div>
+<div>Fetch Email (ID:829)</div>
+<div class="text-green-400">Success</div>
+</div>
+<div class="grid grid-cols-[1fr_2fr_1fr] gap-2 px-4 py-2 border-b border-border-dark text-gray-400">
+<div>14:02:36</div>
+<div>Process Intent</div>
+<div class="text-green-400">Success</div>
+</div>
+<div class="grid grid-cols-[1fr_2fr_1fr] gap-2 px-4 py-2 bg-primary/5 text-white">
+<div>14:02:41</div>
+<div>Create Odoo Task</div>
+<div class="text-green-400 flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">check</span>Done</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Security & Trust Section -->
+<section class="py-20 bg-background-dark border-t border-border-dark relative overflow-hidden">
+<!-- Abstract Background Pattern -->
+<div class="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none" style="background-image: radial-gradient(#194ff0 1px, transparent 1px); background-size: 32px 32px;"></div>
+<div class="layout-content-container max-w-[1200px] mx-auto px-4 lg:px-10 relative z-10">
+<div class="text-center mb-16">
+<h2 class="text-3xl font-bold text-white mb-4">Enterprise-Grade Security</h2>
+<p class="text-text-secondary max-w-2xl mx-auto">Your data is yours. Donna is designed to work within your existing security perimeter, ensuring compliance and peace of mind.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-8">
+<div class="p-6 rounded-xl bg-card-dark border border-border-dark hover:border-primary/50 transition-colors group">
+<div class="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">Zero-Training Policy</h3>
+<p class="text-sm text-text-secondary leading-relaxed">
+                        Your operational data is never used to train our public models. What happens in your workspace, stays in your workspace.
+                    </p>
+</div>
+<div class="p-6 rounded-xl bg-card-dark border border-border-dark hover:border-primary/50 transition-colors group">
+<div class="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">encrypted</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">SOC 2 &amp; GDPR</h3>
+<p class="text-sm text-text-secondary leading-relaxed">
+                        Built on a foundation of rigorous compliance standards. We employ end-to-end encryption for all data in transit and at rest.
+                    </p>
+</div>
+<div class="p-6 rounded-xl bg-card-dark border border-border-dark hover:border-primary/50 transition-colors group">
+<div class="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">key</span>
+</div>
+<h3 class="text-lg font-bold text-white mb-2">Your API Keys</h3>
+<p class="text-sm text-text-secondary leading-relaxed">
+                        Donna uses your own API credentials. You can revoke access at any time directly from your service provider (Google, Slack, etc).
+                    </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer CTA -->
+<section class="py-24 px-4 bg-background-dark border-t border-border-dark">
+<div class="max-w-[800px] mx-auto text-center flex flex-col items-center">
+<h2 class="text-3xl md:text-4xl font-black text-white mb-6">Ready to automate your operations?</h2>
+<p class="text-text-secondary text-lg mb-8 max-w-xl">
+                See Donna in action with a personalized demo. We'll show you how to automate your specific workflows in 15 minutes.
+            </p>
+<div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
+<button class="flex h-12 items-center justify-center rounded-lg bg-primary px-8 text-base font-bold text-white hover:bg-primary-dark transition-all shadow-[0_0_20px_rgba(25,79,240,0.3)]">
+                    Book a Live Demo
+                </button>
+<button class="flex h-12 items-center justify-center rounded-lg border border-border-dark bg-card-dark px-8 text-base font-bold text-white hover:bg-white/5 transition-colors">
+                    View Integration Library
+                </button>
+</div>
+</div>
+</section>
+<script>
+        // Simple script to handle tab switching (mock functionality)
+        const radios = document.querySelectorAll('input[name="example-toggle"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                // In a real implementation, this would swap the content of the steps
+                // For this UI demo, we'll just log it
+                console.log('Switched to:', e.target.value);
+            });
+        });
+    </script>
+</body></html>

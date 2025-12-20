@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pricing - Donna AI</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#194ff0",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101522",
+                        "card-dark": "#1b1e27",
+                        "border-dark": "#282c39"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for table */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Hide details marker */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden antialiased selection:bg-primary/30 selection:text-white">
+<div class="flex flex-col min-h-screen">
+<!-- Header -->
+<header class="sticky top-0 z-50 w-full border-b border-solid border-gray-200 dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="px-4 md:px-10 py-3 flex items-center justify-between mx-auto max-w-7xl">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Donna AI</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-end gap-8 items-center">
+<nav class="flex items-center gap-9">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Product</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Solutions</a>
+<a class="text-sm font-medium text-primary" href="#">Pricing</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Company</a>
+</nav>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary hover:bg-blue-600 transition-colors text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Get Started</span>
+</button>
+</div>
+<!-- Mobile Menu Icon -->
+<button class="md:hidden text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center w-full px-4 md:px-10 pt-10 pb-20">
+<div class="w-full max-w-[960px] flex flex-col gap-8">
+<!-- Hero Section -->
+<div class="flex flex-col items-center text-center gap-4 py-8">
+<h1 class="text-4xl md:text-5xl font-black leading-tight tracking-[-0.033em] bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">
+                        Simple pricing for complex operations
+                    </h1>
+<p class="text-slate-500 dark:text-[#9ca3ba] text-lg font-normal leading-normal max-w-2xl">
+                        Join the Donna AI Pilot Program. Secure, private, and ready to work across your business systems.
+                    </p>
+</div>
+<!-- Billing Toggle -->
+<div class="flex justify-center">
+<div class="flex h-12 items-center justify-center rounded-xl bg-gray-200 dark:bg-border-dark p-1.5">
+<label class="group relative flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-lg px-6 transition-all duration-300 has-[:checked]:bg-white dark:has-[:checked]:bg-background-dark has-[:checked]:shadow-sm">
+<span class="z-10 text-sm font-semibold group-has-[:checked]:text-slate-900 dark:group-has-[:checked]:text-white text-slate-500 dark:text-[#9ca3ba]">Monthly</span>
+<input checked="" class="sr-only" name="billing" type="radio" value="Monthly"/>
+</label>
+<label class="group relative flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-lg px-6 transition-all duration-300 has-[:checked]:bg-white dark:has-[:checked]:bg-background-dark has-[:checked]:shadow-sm">
+<span class="z-10 text-sm font-semibold group-has-[:checked]:text-slate-900 dark:group-has-[:checked]:text-white text-slate-500 dark:text-[#9ca3ba]">Annual <span class="text-primary text-xs ml-1 font-bold">-20%</span></span>
+<input class="sr-only" name="billing" type="radio" value="Annual"/>
+</label>
+</div>
+</div>
+<!-- Pricing Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
+<!-- Card 1: Pilot (Recommended) -->
+<div class="relative flex flex-col gap-6 rounded-2xl border-2 border-primary bg-white dark:bg-card-dark p-8 shadow-2xl shadow-primary/10 transform hover:-translate-y-1 transition-transform duration-300">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            Recommended
+                        </div>
+<div class="flex flex-col gap-2">
+<h3 class="text-xl font-bold">Pilot Access</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400">Perfect for teams validating AI workflows.</p>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="text-4xl font-black tracking-tight">$49</span>
+<span class="text-sm font-medium text-slate-500 dark:text-gray-400">/user/mo</span>
+</div>
+</div>
+<button class="w-full h-12 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold transition-colors">
+                            Apply for Pilot
+                        </button>
+<div class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+<p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-500">Includes</p>
+<ul class="flex flex-col gap-3">
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Unlimited workflows</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>SOC2 Compliance</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Zero-Data Retention</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Priority Support</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Card 2: Standard (Waitlist) -->
+<div class="flex flex-col gap-6 rounded-2xl border border-gray-200 dark:border-border-dark bg-white/50 dark:bg-card-dark/50 p-8 opacity-80 hover:opacity-100 transition-opacity">
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<h3 class="text-xl font-bold">Standard</h3>
+<span class="bg-gray-100 dark:bg-gray-800 text-xs font-bold px-2 py-1 rounded text-slate-500 dark:text-gray-400">Waitlist</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-gray-400">For scaling operational efficiency.</p>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="text-4xl font-black tracking-tight text-slate-400 dark:text-gray-500">Soon</span>
+</div>
+</div>
+<button class="w-full h-12 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-black font-bold hover:opacity-90 transition-opacity">
+                            Join Waitlist
+                        </button>
+<div class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+<p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-500">Everything in Pilot, plus:</p>
+<ul class="flex flex-col gap-3 text-slate-500 dark:text-gray-400">
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-600 text-[20px]">check</span>
+<span>Standard Integrations</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-600 text-[20px]">check</span>
+<span>Team usage analytics</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-600 text-[20px]">check</span>
+<span>Advanced data controls</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Card 3: Enterprise -->
+<div class="flex flex-col gap-6 rounded-2xl border border-gray-200 dark:border-border-dark bg-white dark:bg-card-dark p-8">
+<div class="flex flex-col gap-2">
+<h3 class="text-xl font-bold">Enterprise</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400">Custom security &amp; deep integrations.</p>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="text-4xl font-black tracking-tight">Custom</span>
+</div>
+</div>
+<button class="w-full h-12 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-colors">
+                            Contact Sales
+                        </button>
+<div class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+<p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-500">Everything in Standard, plus:</p>
+<ul class="flex flex-col gap-3">
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>On-premise deployment</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Dedicated Success Manager</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Custom API connectors</span>
+</li>
+<li class="flex gap-3 text-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>Custom SLA</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Trust Indicators -->
+<div class="py-8 border-y border-dashed border-gray-200 dark:border-border-dark/50">
+<p class="text-center text-sm font-semibold text-slate-500 dark:text-gray-500 mb-6 uppercase tracking-widest">Trusted by privacy-first teams at</p>
+<div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<!-- Placeholder SVGs for logos -->
+<div class="h-8 w-auto flex items-center gap-2">
+<div class="w-6 h-6 bg-slate-400 rounded-full"></div>
+<span class="font-bold text-lg text-slate-400">Acme Corp</span>
+</div>
+<div class="h-8 w-auto flex items-center gap-2">
+<div class="w-6 h-6 bg-slate-400 rounded-sm"></div>
+<span class="font-bold text-lg text-slate-400">GlobalBank</span>
+</div>
+<div class="h-8 w-auto flex items-center gap-2">
+<div class="w-6 h-6 border-2 border-slate-400 rounded-full"></div>
+<span class="font-bold text-lg text-slate-400">SecureNet</span>
+</div>
+<div class="h-8 w-auto flex items-center gap-2">
+<div class="w-6 h-6 bg-slate-400 rotate-45"></div>
+<span class="font-bold text-lg text-slate-400">DataFlow</span>
+</div>
+</div>
+</div>
+<!-- Feature Comparison Table -->
+<div class="py-10">
+<div class="text-center mb-10">
+<h2 class="text-2xl font-bold mb-2">Compare Features</h2>
+<p class="text-slate-500 dark:text-gray-400">Detailed breakdown of capabilities across tiers.</p>
+</div>
+<div class="overflow-x-auto custom-scrollbar pb-4">
+<table class="w-full text-left border-collapse min-w-[700px]">
+<thead class="sticky top-0 z-10 bg-background-light dark:bg-background-dark">
+<tr>
+<th class="p-4 border-b border-gray-200 dark:border-border-dark w-1/3">Features</th>
+<th class="p-4 border-b border-gray-200 dark:border-border-dark text-center w-1/5">Pilot</th>
+<th class="p-4 border-b border-gray-200 dark:border-border-dark text-center w-1/5 text-slate-500">Standard</th>
+<th class="p-4 border-b border-gray-200 dark:border-border-dark text-center w-1/5">Enterprise</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-200 dark:divide-border-dark">
+<!-- Core Features -->
+<tr class="bg-gray-50/50 dark:bg-white/5">
+<td class="p-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-500 pl-4" colspan="4">Core Capabilities</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Workflow Execution</td>
+<td class="p-4 text-center text-sm">Unlimited</td>
+<td class="p-4 text-center text-sm text-slate-500">Unlimited</td>
+<td class="p-4 text-center text-sm">Unlimited</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">System Integrations</td>
+<td class="p-4 text-center text-sm">Standard (5)</td>
+<td class="p-4 text-center text-sm text-slate-500">Advanced (20+)</td>
+<td class="p-4 text-center text-sm">Custom / Unlimited</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Context Window</td>
+<td class="p-4 text-center text-sm">32k Tokens</td>
+<td class="p-4 text-center text-sm text-slate-500">128k Tokens</td>
+<td class="p-4 text-center text-sm">Adaptive / Custom</td>
+</tr>
+<!-- Security & Privacy -->
+<tr class="bg-gray-50/50 dark:bg-white/5">
+<td class="p-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-500 pl-4" colspan="4">Security &amp; Privacy</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Data Retention</td>
+<td class="p-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Zero Retention</span>
+</td>
+<td class="p-4 text-center text-slate-500">Configurable</td>
+<td class="p-4 text-center">Configurable / VPC</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">SOC2 Type II</td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-primary text-[20px]">check</span></td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-slate-500 text-[20px]">check</span></td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-primary text-[20px]">check</span></td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Single Sign-On (SSO)</td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-gray-300 dark:text-gray-700 text-[20px]">remove</span></td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-slate-500 text-[20px]">check</span></td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-primary text-[20px]">check</span></td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Audit Logs</td>
+<td class="p-4 text-center"><span class="material-symbols-outlined text-gray-300 dark:text-gray-700 text-[20px]">remove</span></td>
+<td class="p-4 text-center text-sm text-slate-500">30 Days</td>
+<td class="p-4 text-center text-sm">Unlimited</td>
+</tr>
+<!-- Support -->
+<tr class="bg-gray-50/50 dark:bg-white/5">
+<td class="p-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-500 pl-4" colspan="4">Support</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Support Level</td>
+<td class="p-4 text-center text-sm">Priority Email</td>
+<td class="p-4 text-center text-sm text-slate-500">Live Chat</td>
+<td class="p-4 text-center text-sm">Dedicated Slack Channel</td>
+</tr>
+<tr>
+<td class="p-4 text-sm font-medium">Onboarding</td>
+<td class="p-4 text-center text-sm">Self-serve</td>
+<td class="p-4 text-center text-sm text-slate-500">Guided Group</td>
+<td class="p-4 text-center text-sm">Dedicated Manager</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- FAQ Section -->
+<div class="py-8 max-w-3xl mx-auto w-full">
+<h2 class="text-2xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
+<div class="flex flex-col gap-4">
+<details class="group bg-white dark:bg-card-dark rounded-xl p-4 cursor-pointer border border-gray-200 dark:border-border-dark open:border-primary/50 transition-all">
+<summary class="flex items-center justify-between font-medium text-lg">
+<span>Is my data used to train your models?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">keyboard_arrow_down</span>
+</summary>
+<div class="pt-4 text-slate-500 dark:text-gray-400 leading-relaxed">
+                                Absolutely not. Donna AI operates on a strictly private architecture. Your data is processed in ephemeral instances and is never stored or used for model training unless you explicitly opt-in for a custom fine-tuned model on the Enterprise plan.
+                            </div>
+</details>
+<details class="group bg-white dark:bg-card-dark rounded-xl p-4 cursor-pointer border border-gray-200 dark:border-border-dark open:border-primary/50 transition-all">
+<summary class="flex items-center justify-between font-medium text-lg">
+<span>How long does the Pilot Program last?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">keyboard_arrow_down</span>
+</summary>
+<div class="pt-4 text-slate-500 dark:text-gray-400 leading-relaxed">
+                                The Pilot Program is designed as a 3-month validation period. After this period, you will have the option to transition to the Standard plan (with early-bird pricing lock) or move to an Enterprise contract depending on your usage volume.
+                            </div>
+</details>
+<details class="group bg-white dark:bg-card-dark rounded-xl p-4 cursor-pointer border border-gray-200 dark:border-border-dark open:border-primary/50 transition-all">
+<summary class="flex items-center justify-between font-medium text-lg">
+<span>Can I deploy Donna on my own servers?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">keyboard_arrow_down</span>
+</summary>
+<div class="pt-4 text-slate-500 dark:text-gray-400 leading-relaxed">
+                                Yes, on-premise deployment is available exclusively for Enterprise customers. We support deployments via Docker containers or Kubernetes clusters within your VPC (AWS, Azure, GCP).
+                            </div>
+</details>
+<details class="group bg-white dark:bg-card-dark rounded-xl p-4 cursor-pointer border border-gray-200 dark:border-border-dark open:border-primary/50 transition-all">
+<summary class="flex items-center justify-between font-medium text-lg">
+<span>What integrations are included in the Pilot?</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">keyboard_arrow_down</span>
+</summary>
+<div class="pt-4 text-slate-500 dark:text-gray-400 leading-relaxed">
+                                The Pilot includes 5 standard integrations: Slack, Google Workspace (Gmail, Calendar, Drive), Microsoft 365, Notion, and Jira. Additional integrations can be requested but may require Enterprise access.
+                            </div>
+</details>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-gray-200 dark:border-border-dark bg-background-light dark:bg-background-dark py-12 px-4 md:px-10">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-8">
+<div class="flex flex-col gap-4 max-w-xs">
+<div class="flex items-center gap-2 text-slate-900 dark:text-white">
+<div class="size-6 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="font-bold text-lg">Donna AI</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-gray-400">
+                        The secure AI assistant for operational excellence. Automate workflows without compromising privacy.
+                    </p>
+<div class="flex gap-4 mt-2">
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">api</span></a>
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">hub</span></a>
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">security</span></a>
+</div>
+</div>
+<div class="flex flex-wrap gap-12">
+<div class="flex flex-col gap-3">
+<h4 class="font-bold text-sm uppercase tracking-wider text-slate-900 dark:text-white">Product</h4>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Features</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Integrations</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Security</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Changelog</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-bold text-sm uppercase tracking-wider text-slate-900 dark:text-white">Company</h4>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">About</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Careers</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Blog</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Contact</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-bold text-sm uppercase tracking-wider text-slate-900 dark:text-white">Legal</h4>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Privacy Policy</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">Terms of Service</a>
+<a class="text-sm text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-white" href="#">DPA</a>
+</div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-200 dark:border-border-dark flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-slate-500 dark:text-gray-500">© 2024 Donna AI Inc. All rights reserved.</p>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-green-500"></div>
+<span class="text-xs font-medium text-slate-500 dark:text-gray-400">All Systems Operational</span>
+</div>
+</div>
+</footer>
+</div>
+</body></html>
