@@ -3,6 +3,8 @@ import Home from './pages/Home'
 import Odoo from './pages/Odoo'
 import Pricing from './pages/Pricing'
 import Integrations from './pages/Integrations'
+import Blog from './pages/Blog'
+import BlogPost from './pages/BlogPost'
 import { Navbar, Footer } from './components/Shared'
 import { useEffect } from 'react'
 
@@ -43,6 +45,18 @@ const App = () => {
                         <>
                             <ScrollToTop />
                             <Integrations />
+                        </>
+                    </Route>
+                    <Route path="/blog/:id">
+                        <>
+                            <ScrollToTop />
+                            <BlogPost />
+                        </>
+                    </Route>
+                    <Route path="/blog">
+                        <>
+                            <ScrollToTop />
+                            <Blog />
                         </>
                     </Route>
                     {/* Fallback to Home */}

@@ -16,6 +16,7 @@ export const Navbar = () => (
                     <Link href="/pricing"><a className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors">Pricing</a></Link>
                     <Link href="/odoo"><a className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors">Odoo</a></Link>
                     <Link href="/integrations"><a className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors">Integrations</a></Link>
+                    <Link href="/blog"><a className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors">Blog</a></Link>
                 </nav>
                 <div className="flex items-center gap-4">
                     <a className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white" href="#">Log in</a>
@@ -53,7 +54,7 @@ export const Footer = () => (
                 <h4 className="font-bold mb-6 dark:text-white">Company</h4>
                 <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
                     <li><a href="#" className="hover:text-primary transition-colors">About</a></li>
-                    <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
+                    <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
                     <li><a href="#" className="hover:text-primary transition-colors">Careers</a></li>
                     <li><a href="#" className="hover:text-primary transition-colors">Contact</a></li>
                 </ul>
