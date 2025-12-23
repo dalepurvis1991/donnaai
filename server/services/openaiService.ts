@@ -29,7 +29,8 @@ export const TaskDetectionSchema = z.object({
   orderNumber: z.string().optional(),
   stages: z.array(z.object({
     stage: z.string(),
-    completed: z.boolean()
+    completed: z.boolean(),
+    order: z.number().optional()
   })).optional(),
   reasoning: z.string()
 });
@@ -42,7 +43,8 @@ export const TaskUpdateSchema = z.object({
     stage: z.string(),
     completed: z.boolean(),
     completedAt: z.string().optional(),
-    emailId: z.number().optional()
+    emailId: z.number().optional(),
+    order: z.number().optional()
   })),
   orderNumber: z.string().optional(),
   invoiceNumber: z.string().optional(),

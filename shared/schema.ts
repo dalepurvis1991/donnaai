@@ -259,6 +259,7 @@ export const tasks = pgTable("tasks", {
     completed: boolean;
     completedAt?: Date;
     emailId?: number;
+    order?: number;
   }[]>().default([]),
   
   createdAt: timestamp("created_at").defaultNow(),

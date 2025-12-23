@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { openaiService } from "./openaiService";
+import { applyStageOrder, createDefaultStages, normalizeStages } from "../utils/taskStages";
 
 export interface TaskDetectionResult {
   isTask: boolean;
@@ -16,6 +17,7 @@ export interface TaskDetectionResult {
     completed: boolean;
     completedAt?: Date;
     emailId?: number;
+    order?: number;
   }[];
   reasoning?: string;
 }
@@ -27,6 +29,7 @@ export interface TaskUpdate {
     completed: boolean;
     completedAt?: Date;
     emailId?: number;
+    order?: number;
   }[];
   orderNumber?: string;
   invoiceNumber?: string;
@@ -104,7 +107,7 @@ Respond with JSON in this format:
         supplier: response.supplier,
         amount: response.amount,
         orderNumber: response.orderNumber,
-        stages: response.stages || [],
+        stages: normalizeStages(response.stages || []),
         reasoning: response.reasoning
       };
     } catch (error) {
@@ -184,9 +187,14 @@ Respond with JSON:
 
       if (!response.hasUpdate) return null;
 
+      const mappedStages = response.stages.map(s => ({
+        ...s,
+        completedAt: s.completedAt ? new Date(s.completedAt) : undefined
+      }));
+
       return {
         status: response.status,
-        stages: response.stages.map(s => ({ ...s, completedAt: s.completedAt ? new Date(s.completedAt) : undefined })),
+        stages: applyStageOrder(task.stages || [], mappedStages),
         orderNumber: response.orderNumber,
         invoiceNumber: response.invoiceNumber,
         amount: response.amount,
@@ -205,6 +213,9 @@ Respond with JSON:
 
       if (taskDetection.isTask && taskDetection.confidence > 0.7) {
         // Create new task
+        const normalizedStages = normalizeStages(taskDetection.stages || []);
+        const stages = normalizedStages.length > 0 ? normalizedStages : createDefaultStages();
+
         await storage.createTask({
           userId,
           title: taskDetection.title!,
@@ -218,7 +229,7 @@ Respond with JSON:
           supplier: taskDetection.supplier,
           amount: taskDetection.amount,
           orderNumber: taskDetection.orderNumber,
-          stages: taskDetection.stages
+          stages
         });
 
         console.log(`Created new task: ${taskDetection.title} (confidence: ${taskDetection.confidence})`);
