@@ -8,6 +8,7 @@ import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
 import { digestService } from "./services/digestService";
 import { taskService } from "./services/taskService";
 import { correlationService } from "./services/correlationService";
+import { createDefaultStages, normalizeStages } from "./utils/taskStages";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -45,7 +46,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const task = await storage.createTask({ ...req.body, userId });
+      const normalizedStages = normalizeStages(req.body?.stages || []);
+      const stages = normalizedStages.length > 0 ? normalizedStages : createDefaultStages();
+      const task = await storage.createTask({ ...req.body, userId, stages });
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -623,7 +626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: "medium",
         category: "email_followup",
         autoDetected: false,
-        emailId: emailId
+        emailId: emailId,
+        stages: createDefaultStages()
       });
       
       res.json(task);
@@ -968,7 +972,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User ID not found" });
       }
       
-      const taskData = { ...req.body, userId };
+      const normalizedStages = normalizeStages(req.body?.stages || []);
+      const stages = normalizedStages.length > 0 ? normalizedStages : createDefaultStages();
+      const taskData = { ...req.body, userId, stages };
       const task = await storage.createTask(taskData);
       res.json(task);
     } catch (error) {

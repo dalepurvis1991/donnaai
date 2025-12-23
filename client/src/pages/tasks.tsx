@@ -17,7 +17,9 @@ import {
   Calendar,
   User,
   DollarSign,
-  CheckSquare
+  CheckSquare,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -42,6 +44,7 @@ interface Task {
     completed: boolean;
     completedAt?: string;
     emailId?: number;
+    order?: number;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -94,6 +97,29 @@ export default function Tasks() {
     if (!stages || stages.length === 0) return 0;
     const completed = stages.filter(stage => stage.completed).length;
     return (completed / stages.length) * 100;
+  };
+
+  const getOrderedStages = (stages: Task["stages"]) => {
+    if (!stages) return [];
+    return [...stages].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  };
+
+  const moveStage = (task: Task, fromIndex: number, toIndex: number) => {
+    const orderedStages = getOrderedStages(task.stages);
+    if (toIndex < 0 || toIndex >= orderedStages.length) return;
+    const updatedStages = [...orderedStages];
+    const [movedStage] = updatedStages.splice(fromIndex, 1);
+    updatedStages.splice(toIndex, 0, movedStage);
+
+    updateTaskMutation.mutate({
+      id: task.id,
+      updates: {
+        stages: updatedStages.map((stage, index) => ({
+          ...stage,
+          order: index
+        }))
+      }
+    });
   };
 
   const markTaskComplete = (task: Task) => {
@@ -359,19 +385,43 @@ export default function Tasks() {
                       </div>
                       <Progress value={getStageProgress(task.stages)} className="h-2" />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                        {task.stages.map((stage, index) => (
+                        {getOrderedStages(task.stages).map((stage, index, orderedStages) => (
                           <div 
-                            key={index}
+                            key={`${stage.stage}-${index}`}
                             className={`flex items-center gap-2 text-sm p-2 rounded ${
                               stage.completed ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-600"
                             }`}
                           >
-                            {stage.completed ? (
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Clock className="h-3 w-3 text-gray-400" />
-                            )}
-                            <span>{stage.stage}</span>
+                            <div className="flex items-center gap-2 flex-1">
+                              {stage.completed ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Clock className="h-3 w-3 text-gray-400" />
+                              )}
+                              <span>{stage.stage}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => moveStage(task, index, index - 1)}
+                                disabled={index === 0}
+                                aria-label={`Move ${stage.stage} up`}
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => moveStage(task, index, index + 1)}
+                                disabled={index === orderedStages.length - 1}
+                                aria-label={`Move ${stage.stage} down`}
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
