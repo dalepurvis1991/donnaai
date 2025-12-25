@@ -17,6 +17,7 @@ import Digest from "@/pages/digest";
 import BulkProcessing from "@/pages/bulk-processing";
 import Tasks from "@/pages/tasks";
 import Correlations from "@/pages/correlations";
+import TeamMembers from "@/pages/team-members";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,25 +25,7 @@ function Router() {
 
   console.log('Router - Auth State:', { isAuthenticated, isLoading, hasUser: !!user });
 
-  // Global auto-refresh functionality - refresh emails every 15 minutes when authenticated
-  useEffect(() => {
-    if (!isAuthenticated || !user) return;
-    
-    const autoRefreshEmails = async () => {
-      try {
-        await apiRequest("POST", "/api/emails/refresh", {});
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-        console.log("Auto-refresh: Emails updated successfully");
-      } catch (error) {
-        console.error("Auto-refresh failed:", error);
-      }
-    };
 
-    // Initial fetch and then every 15 minutes
-    const interval = setInterval(autoRefreshEmails, 15 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user]);
 
   return (
     <Switch>
@@ -64,6 +47,7 @@ function Router() {
           <Route path="/tasks" component={Tasks} />
           <Route path="/correlations" component={Correlations} />
           <Route path="/bulk-processing" component={BulkProcessing} />
+          <Route path="/team" component={TeamMembers} />
         </>
       )}
       <Route component={NotFound} />

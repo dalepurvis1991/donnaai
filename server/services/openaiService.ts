@@ -2,13 +2,8 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY environment variable is not set");
-}
+// OpenAI client is initialized lazily in the service
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 // Schemas for Structured Outputs
 export const CategorizationSchema = z.object({
@@ -110,13 +105,25 @@ export const CorrelationSchema = z.object({
 });
 
 export class OpenAIService {
+  private _client: OpenAI | null = null;
+
+  private get client(): OpenAI {
+    if (!this._client) {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error("OPENAI_API_KEY environment variable is not set");
+      }
+      this._client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+    return this._client;
+  }
+
   async generateStructuredResponse<T>(
     prompt: string,
     context: string,
     format: { type: string, zodSchema: z.ZodType<T>, name: string }
   ): Promise<T> {
     try {
-      const response = await openai.beta.chat.completions.parse({
+      const response = await this.client.beta.chat.completions.parse({
         model: "gpt-4o",
         messages: [
           {
@@ -138,7 +145,7 @@ export class OpenAIService {
       } else {
         throw new Error("Refused to generate structured output");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("OpenAI Structured Output error:", error);
       throw new Error(`OpenAI service error: ${error.message}`);
     }
@@ -220,7 +227,7 @@ Generate a reply that:
         ...messageArray
       ];
 
-      const response = await openai.chat.completions.create({
+      const response = await this.client.chat.completions.create({
         model: "gpt-4o",
         messages: chatMessages,
         temperature: 0.7,
@@ -228,7 +235,7 @@ Generate a reply that:
       });
 
       return response.choices[0].message.content || "";
-    } catch (error) {
+    } catch (error: any) {
       console.error("OpenAI chat error:", error);
       throw new Error(`Chat service error: ${error.message}`);
     }
@@ -236,7 +243,7 @@ Generate a reply that:
 
   async summarizeText(text: string, maxLength: number = 150): Promise<string> {
     try {
-      const response = await openai.chat.completions.create({
+      const response = await this.client.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -273,7 +280,7 @@ Generate a reply that:
 
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await openai.embeddings.create({
+      const response = await this.client.embeddings.create({
         model: "text-embedding-3-small",
         input: text.replace(/\n/g, " "),
       });

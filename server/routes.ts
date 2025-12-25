@@ -15,13 +15,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`${req.method} ${req.url} from ${req.hostname}`);
     next();
   });
-  
+
   // Set up Google-only authentication 
   setupGoogleOnlyAuth(app);
 
   // Debug route to test callback URL
   app.get('/api/test-callback', (req, res) => {
-    res.json({ 
+    res.json({
       message: 'Callback endpoint is reachable',
       hostname: req.hostname,
       url: req.url,
@@ -116,12 +116,278 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { emailId, emailContent } = req.body;
-      
+
       await taskService.processEmailForTasks(emailId, emailContent, userId);
       res.json({ message: "Email processed for tasks" });
     } catch (error) {
       console.error("Error processing email for tasks:", error);
       res.status(500).json({ message: "Failed to process email" });
+    }
+  });
+
+  // ============================================
+  // TEAM MEMBER ROUTES
+  // ============================================
+
+  // Get all team members for the user
+  app.get('/api/team-members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const members = await storage.getTeamMembers(userId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // Get a specific team member
+  app.get('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const member = await storage.getTeamMemberById(parseInt(req.params.id));
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error fetching team member:", error);
+      res.status(500).json({ message: "Failed to fetch team member" });
+    }
+  });
+
+  // Create a new team member
+  app.post('/api/team-members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const member = await storage.createTeamMember({
+        ...req.body,
+        userId
+      });
+      res.json(member);
+    } catch (error) {
+      console.error("Error creating team member:", error);
+      res.status(500).json({ message: "Failed to create team member" });
+    }
+  });
+
+  // Update a team member
+  app.put('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const member = await storage.updateTeamMember(parseInt(req.params.id), req.body);
+      res.json(member);
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
+  // Delete a team member
+  app.delete('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteTeamMember(parseInt(req.params.id));
+      res.json({ message: "Team member deleted" });
+    } catch (error) {
+      console.error("Error deleting team member:", error);
+      res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
+  // ============================================
+  // PROJECT ROUTES
+  // ============================================
+
+  // Get all projects for the user
+  app.get('/api/projects', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const projectList = await storage.getProjects(userId);
+      res.json(projectList);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  // Get a specific project with its stages and tasks
+  app.get('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const project = await storage.getProjectById(parseInt(req.params.id));
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const stages = await storage.getProjectStages(project.id);
+      const userId = req.user.id || req.user?.claims?.sub;
+      const projectTasks = await storage.getUserTasks(userId);
+      const tasksInProject = projectTasks.filter((t: any) => t.projectId === project.id);
+
+      res.json({
+        ...project,
+        stages,
+        tasks: tasksInProject
+      });
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  // Create a new project
+  app.post('/api/projects', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const project = await storage.createProject({
+        ...req.body,
+        userId
+      });
+      res.json(project);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  // Update a project
+  app.put('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const project = await storage.updateProject(parseInt(req.params.id), req.body);
+      res.json(project);
+    } catch (error) {
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // Delete a project
+  app.delete('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteProject(parseInt(req.params.id));
+      res.json({ message: "Project deleted" });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // ============================================
+  // PROJECT STAGE ROUTES
+  // ============================================
+
+  // Get stages for a project
+  app.get('/api/projects/:projectId/stages', isAuthenticated, async (req: any, res) => {
+    try {
+      const stages = await storage.getProjectStages(parseInt(req.params.projectId));
+      res.json(stages);
+    } catch (error) {
+      console.error("Error fetching project stages:", error);
+      res.status(500).json({ message: "Failed to fetch stages" });
+    }
+  });
+
+  // Create a new stage
+  app.post('/api/projects/:projectId/stages', isAuthenticated, async (req: any, res) => {
+    try {
+      const stage = await storage.createProjectStage({
+        ...req.body,
+        projectId: parseInt(req.params.projectId)
+      });
+      res.json(stage);
+    } catch (error) {
+      console.error("Error creating project stage:", error);
+      res.status(500).json({ message: "Failed to create stage" });
+    }
+  });
+
+  // Update a stage
+  app.put('/api/projects/:projectId/stages/:stageId', isAuthenticated, async (req: any, res) => {
+    try {
+      const stage = await storage.updateProjectStage(parseInt(req.params.stageId), req.body);
+      res.json(stage);
+    } catch (error) {
+      console.error("Error updating project stage:", error);
+      res.status(500).json({ message: "Failed to update stage" });
+    }
+  });
+
+  // Delete a stage
+  app.delete('/api/projects/:projectId/stages/:stageId', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteProjectStage(parseInt(req.params.stageId));
+      res.json({ message: "Stage deleted" });
+    } catch (error) {
+      console.error("Error deleting project stage:", error);
+      res.status(500).json({ message: "Failed to delete stage" });
+    }
+  });
+
+  // ============================================
+  // APPROVAL WORKFLOW ROUTES
+  // ============================================
+
+  // Get tasks pending approval
+  app.get('/api/approvals/pending', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const pendingTasks = await storage.getPendingApprovalTasks(userId);
+      res.json(pendingTasks);
+    } catch (error) {
+      console.error("Error fetching pending approvals:", error);
+      res.status(500).json({ message: "Failed to fetch pending approvals" });
+    }
+  });
+
+  // Approve a task
+  app.post('/api/tasks/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const task = await storage.approveTask(parseInt(req.params.id), userId);
+      res.json(task);
+    } catch (error) {
+      console.error("Error approving task:", error);
+      res.status(500).json({ message: "Failed to approve task" });
+    }
+  });
+
+  // Reject a task
+  app.post('/api/tasks/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const task = await storage.rejectTask(parseInt(req.params.id), userId);
+      res.json(task);
+    } catch (error) {
+      console.error("Error rejecting task:", error);
+      res.status(500).json({ message: "Failed to reject task" });
+    }
+  });
+
+  // ============================================
+  // USER PREFERENCES ROUTES
+  // ============================================
+
+  // Get user preferences
+  app.get('/api/user-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const prefs = await storage.getUserPreferences(userId);
+      res.json(prefs || {
+        autoAssignEnabled: false,
+        autoApproveThreshold: 0.95
+      });
+    } catch (error) {
+      console.error("Error fetching user preferences:", error);
+      res.status(500).json({ message: "Failed to fetch preferences" });
+    }
+  });
+
+  // Update user preferences
+  app.put('/api/user-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user?.claims?.sub;
+      const prefs = await storage.updateUserPreferences(userId, req.body);
+      res.json(prefs);
+    } catch (error) {
+      console.error("Error updating user preferences:", error);
+      res.status(500).json({ message: "Failed to update preferences" });
     }
   });
 
@@ -134,7 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         hasGoogleToken: !!user.googleAccessToken
       });
-      
+
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -167,9 +433,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set session
       (req.session as any).userId = demoUser.id;
-      
+
       console.log('Demo user logged in:', demoUser.email);
-      
+
       // Force session save
       req.session.save((err) => {
         if (err) {
@@ -191,22 +457,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.json({ 
-          status: "ok", 
-          emailConnection: "no_user" 
+        return res.json({
+          status: "ok",
+          emailConnection: "no_user"
         });
       }
-      
+
       const emailConnected = await gmailApiService.testConnection(user);
       const calendarConnected = await calendarApiService.testConnection(user);
-      res.json({ 
-        status: "ok", 
+      res.json({
+        status: "ok",
         emailConnection: emailConnected ? "connected" : "disconnected",
         calendarConnection: calendarConnected ? "connected" : "disconnected"
       });
     } catch (error) {
-      res.status(500).json({ 
-        status: "error", 
+      res.status(500).json({
+        status: "error",
         emailConnection: "disconnected",
         message: error instanceof Error ? error.message : "Unknown error"
       });
@@ -214,23 +480,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get email statistics
-  app.get("/api/emails/stats", async (req, res) => {
+  app.get("/api/emails/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const stats = await storage.getEmailStats();
+      const userId = req.user.id || req.user?.claims?.sub;
+      const stats = await storage.getEmailStats(userId);
       res.json(stats);
     } catch (error) {
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to get email stats" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to get email statistics"
       });
     }
   });
 
   // Get categorized emails
-  app.get("/api/emails/categorized", async (req, res) => {
+  app.get("/api/emails/categorized", isAuthenticated, async (req: any, res) => {
     try {
-      const fyiEmails = await storage.getEmailsByCategory('FYI');
-      const draftEmails = await storage.getEmailsByCategory('Draft');
-      const forwardEmails = await storage.getEmailsByCategory('Forward');
+      const userId = req.user.id || req.user?.claims?.sub;
+      const fyiEmails = await storage.getEmailsByCategory(userId, 'FYI');
+      const draftEmails = await storage.getEmailsByCategory(userId, 'Draft');
+      const forwardEmails = await storage.getEmailsByCategory(userId, 'Forward');
 
       const formatEmail = (email: any) => ({
         id: email.id,
@@ -247,20 +515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         forward: forwardEmails.map(formatEmail),
       });
     } catch (error) {
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to get categorized emails" 
-      });
-    }
-  });
-
-  // Get email statistics
-  app.get("/api/emails/stats", async (req, res) => {
-    try {
-      const stats = await storage.getEmailStats();
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to get email statistics" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to get categorized emails"
       });
     }
   });
@@ -272,30 +528,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user?.googleAccessToken) {
-        return res.status(400).json({ 
-          message: "Gmail access not granted. Please log in again to grant Gmail permission." 
+        return res.status(400).json({
+          message: "Gmail access not granted. Please log in again to grant Gmail permission."
         });
       }
 
       const { limit = 1000 } = req.body;
-      
+
       // Clear existing emails first
-      await storage.clearEmails();
-      
+      await storage.clearEmails(userId);
+
       // Fetch large number of emails for learning context
       const { gmailApiService } = await import("./services/gmailApiService");
       const newEmails = await gmailApiService.fetchUserEmails(user, limit);
-      
+
       // Store new emails and process for learning
       const createdEmails = [];
       for (const email of newEmails) {
-        const createdEmail = await storage.createEmail(email);
+        const createdEmail = await storage.upsertEmail(email);
         createdEmails.push(createdEmail);
       }
-      
+
       // Index emails for vector search
       try {
         const { vectorService } = await import("./services/vectorService");
@@ -303,16 +559,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.log("Vector indexing not available:", error.message);
       }
-      
-      res.json({ 
-        message: "Bulk processing completed successfully", 
+
+      res.json({
+        message: "Bulk processing completed successfully",
         processed: newEmails.length,
-        limit 
+        limit
       });
     } catch (error) {
       console.error('Bulk processing error:', error);
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to process emails in bulk" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to process emails in bulk"
       });
     }
   });
@@ -324,15 +580,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasUser: !!req.user,
         userId: req.user?.id
       });
-      
+
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         console.log('User not found in database:', userId);
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       console.log('User for email refresh:', {
         id: user.id,
         hasGoogleToken: !!user.googleAccessToken,
@@ -340,34 +596,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!user.googleAccessToken) {
-        return res.status(400).json({ 
-          message: "Gmail access not granted. Please log in again to grant Gmail permission." 
+        return res.status(400).json({
+          message: "Gmail access not granted. Please log in again to grant Gmail permission."
         });
       }
 
       // Clear existing emails
-      await storage.clearEmails();
-      
+      await storage.clearEmails(userId);
+
       // Fetch new emails from Gmail API
       const emailCount = req.body?.count || 50; // Default 50, allow user preference
       const newEmails = await gmailApiService.fetchUserEmails(user, emailCount);
-      
+
       // Store new emails and detect correlations
       const createdEmails = [];
       for (const email of newEmails) {
         const createdEmail = await storage.createEmail(email);
         createdEmails.push(createdEmail);
       }
-      
+
       // Detect correlations for new emails (safely)
       try {
-        const existingEmails = await storage.getEmails();
+        const existingEmails = await storage.getEmails(userId);
         for (const email of createdEmails) {
           if (email.id && existingEmails.length > 0) {
             const correlations = await correlationService.detectCorrelations(email, existingEmails);
             if (correlations.length > 0) {
               // Validate email IDs exist before creating correlations
-              const validCorrelations = correlations.filter(c => 
+              const validCorrelations = correlations.filter(c =>
                 existingEmails.some(e => e.id === c.emailId)
               );
               if (validCorrelations.length > 0) {
@@ -380,29 +636,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Correlation detection skipped:", correlationError.message);
       }
 
-      const stats = await storage.getEmailStats();
-      
-      res.json({ 
-        message: "Emails refreshed successfully", 
+      const stats = await storage.getEmailStats(userId);
+
+      res.json({
+        message: "Emails refreshed successfully",
         count: newEmails.length,
-        stats 
+        stats
       });
     } catch (error) {
       console.error('Email refresh error:', error);
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to refresh emails" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to refresh emails"
       });
     }
   });
 
   // Get all emails
-  app.get("/api/emails", async (req, res) => {
+  app.get("/api/emails", isAuthenticated, async (req: any, res) => {
     try {
-      const emails = await storage.getEmails();
+      const userId = req.user.id || req.user?.claims?.sub;
+      const emails = await storage.getEmails(userId);
       res.json(emails);
     } catch (error) {
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to get emails" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to get emails"
       });
     }
   });
@@ -414,8 +671,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getCalendarEvents(userId);
       res.json(events);
     } catch (error) {
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to fetch calendar events" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to fetch calendar events"
       });
     }
   });
@@ -426,39 +683,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       if (!user.googleAccessToken) {
-        return res.status(400).json({ 
-          message: "Calendar access not granted. Please log in again to grant calendar permission." 
+        return res.status(400).json({
+          message: "Calendar access not granted. Please log in again to grant calendar permission."
         });
       }
 
       // Clear existing events
       await storage.clearCalendarEvents(userId);
-      
+
       // Fetch new calendar events
       const daysAhead = req.body?.daysAhead || 7;
       const newEvents = await calendarApiService.fetchUserEvents(user, daysAhead);
-      
+
       // Store new events
       for (const event of newEvents) {
         await storage.createCalendarEvent(event);
       }
 
-      res.json({ 
-        message: "Calendar events refreshed successfully", 
-        count: newEvents.length 
+      res.json({
+        message: "Calendar events refreshed successfully",
+        count: newEvents.length
       });
     } catch (error) {
       console.error('Calendar refresh error:', error);
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to refresh calendar events" 
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to refresh calendar events"
       });
     }
   });
@@ -498,16 +755,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { type, value, category, confidence } = req.body;
-      
+
       const settings = await storage.getUserSettings(userId);
       if (type === "sender") {
         settings.emailRules.senderRules.push({ email: value, category, confidence });
       } else if (type === "subject") {
         settings.emailRules.subjectRules.push({ pattern: value, category, confidence });
       }
-      
+
       const updated = await storage.updateUserSettings(userId, settings);
       res.json(updated);
     } catch (error) {
@@ -550,9 +807,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const user = await storage.getUser(userId);
-      
+
       if (!user?.googleAccessToken) {
         return res.status(401).json({ message: "Gmail access required" });
       }
@@ -560,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // TODO: Implement actual Gmail API send functionality
       // For now, we'll simulate sending
       console.log(`Simulating email send: ${subject} to ${to}`);
-      
+
       res.json({ message: "Reply sent successfully" });
     } catch (error) {
       console.error("Error sending reply:", error);
@@ -573,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const emailId = parseInt(req.params.id);
       const userId = req.user?.claims?.sub || req.user?.id;
-      
+
       const email = await storage.getEmailById(emailId);
       if (!email) {
         return res.status(404).json({ message: "Email not found" });
@@ -591,12 +848,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { openaiService } = await import("./services/openaiService");
       const draft = await openaiService.generateDraftReply(
-        email.subject, 
-        email.body, 
+        email.subject,
+        email.body,
         email.sender,
         businessContext
       );
-      
+
       res.json(draft);
     } catch (error) {
       console.error("Error generating draft:", error);
@@ -609,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const emailId = parseInt(req.params.id);
       const userId = req.user?.claims?.sub || req.user?.id;
-      
+
       const email = await storage.getEmailById(emailId);
       if (!email) {
         return res.status(404).json({ message: "Email not found" });
@@ -625,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoDetected: false,
         emailId: emailId
       });
-      
+
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -655,13 +912,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { q: query } = req.query;
-      
+
       if (!query) {
         return res.json([]);
       }
-      
+
       const { vectorService } = await import("./services/vectorService");
       const results = await vectorService.searchMemories(query as string, userId);
       res.json(results);
@@ -677,12 +934,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { vectorService } = await import("./services/vectorService");
-      
+
       // Index all user emails
       await vectorService.indexAllUserEmails(userId);
-      
+
       res.json({ message: "Indexing completed successfully" });
     } catch (error) {
       console.error("Error indexing memories:", error);
@@ -696,18 +953,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { content } = req.body;
-      
+
       if (!content) {
         return res.status(400).json({ message: "Content is required" });
       }
-      
+
       const { vectorService } = await import("./services/vectorService");
       const noteId = `note-${Date.now()}`;
-      
+
       await vectorService.indexNote(noteId, content, userId);
-      
+
       res.json({ message: "Note added successfully", noteId });
     } catch (error) {
       console.error("Error adding note:", error);
@@ -722,19 +979,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { limit = 1000 } = req.body;
-      
+
       // Fetch large batch of emails from Gmail
       const emails = await gmailApiService.fetchEmailsInBatch(req.user, limit);
-      
+
       // Process for RAG system
       const { ragService } = await import("./services/ragService");
       await ragService.processEmailsForLearning(userId, emails);
-      
-      res.json({ 
-        processed: emails.length, 
-        message: `Successfully processed ${emails.length} emails for learning` 
+
+      res.json({
+        processed: emails.length,
+        message: `Successfully processed ${emails.length} emails for learning`
       });
     } catch (error) {
       console.error("Error processing bulk emails:", error);
@@ -763,13 +1020,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { content } = req.body;
-      
+
       if (!content || content.trim() === "") {
         return res.status(400).json({ message: "Message content is required" });
       }
-      
+
       // Store user message
       await storage.createChatMessage({
         userId,
@@ -782,11 +1039,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ragService } = await import("./services/ragService");
       console.log('Processing chat message for user:', userId);
       const aiResponse = await ragService.processUserMessage(userId, content.trim());
-      
+
       // Store AI response
       await storage.createChatMessage({
         userId,
-        role: "assistant", 
+        role: "assistant",
         content: aiResponse,
         timestamp: new Date(),
       });
@@ -807,10 +1064,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { draftAssistantService } = await import("./services/draftAssistantService");
       const draft = await draftAssistantService.generateReply(emailId, userId, userInput);
-      
+
       res.json(draft);
     } catch (error) {
       console.error("Error generating draft:", error);
@@ -825,7 +1082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const folders = await storage.getUserFolders(userId);
       res.json(folders);
     } catch (error) {
@@ -840,12 +1097,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { name, color, description } = req.body;
       if (!name) {
         return res.status(400).json({ message: "Folder name is required" });
       }
-      
+
       const folder = await storage.createFolder(userId, name, color, description);
       res.json(folder);
     } catch (error) {
@@ -880,11 +1137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const emailId = parseInt(req.params.id);
       const { folderId } = req.body;
-      
+
       if (!folderId) {
         return res.status(400).json({ message: "Folder ID is required" });
       }
-      
+
       await storage.assignEmailToFolder(emailId, folderId);
       res.json({ message: "Email assigned to folder successfully" });
     } catch (error) {
@@ -900,12 +1157,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { ruleType, ruleValue } = req.body;
       if (!ruleType || !ruleValue) {
         return res.status(400).json({ message: "Rule type and value are required" });
       }
-      
+
       const rule = await storage.createFolderRule(userId, folderId, ruleType, ruleValue);
       res.json(rule);
     } catch (error) {
@@ -920,7 +1177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const rules = await storage.getFolderRules(userId);
       res.json(rules);
     } catch (error) {
@@ -936,7 +1193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const status = req.query.status as string;
       const statuses = status && status !== "all" ? [status] : undefined;
       const tasks = await storage.getUserTasks(userId, statuses);
@@ -967,7 +1224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const taskData = { ...req.body, userId };
       const task = await storage.createTask(taskData);
       res.json(task);
@@ -1007,13 +1264,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { hoursBack = 24 } = req.body;
       const { digestService } = await import("./services/digestService");
-      
+
       const digestData = await digestService.generateDailyDigest(userId, hoursBack);
       await digestService.saveDailyDigest(userId, digestData);
-      
+
       res.json(digestData);
     } catch (error) {
       console.error("Error generating digest:", error);
@@ -1027,10 +1284,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const { days = 7 } = req.query;
       const { digestService } = await import("./services/digestService");
-      
+
       const history = await digestService.getUserDigestHistory(userId, parseInt(days as string));
       res.json(history);
     } catch (error) {
@@ -1046,7 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const groups = await correlationService.getCorrelationGroups(userId);
       res.json(groups);
     } catch (error) {
@@ -1054,34 +1311,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch correlation groups" });
     }
   });
-  
+
   app.get("/api/correlations/:groupId", isAuthenticated, async (req: any, res) => {
     try {
       const groupId = req.params.groupId;
       const correlations = await storage.getCorrelationsByGroup(groupId);
       const analysis = await correlationService.analyzeCorrelationGroup(groupId);
-      
+
       res.json({ correlations, analysis });
     } catch (error) {
       console.error("Error fetching correlation details:", error);
       res.status(500).json({ message: "Failed to fetch correlation details" });
     }
   });
-  
+
   app.post("/api/correlations", isAuthenticated, async (req: any, res) => {
     try {
       const { emailIds, correlationType, subject } = req.body;
-      
+
       if (!emailIds || !Array.isArray(emailIds) || emailIds.length < 2) {
         return res.status(400).json({ message: "At least 2 email IDs required" });
       }
-      
+
       const groupId = await correlationService.createManualCorrelation(
         emailIds,
         correlationType || "manual",
         subject || "Manual correlation"
       );
-      
+
       res.json({ groupId, message: "Correlation created successfully" });
     } catch (error) {
       console.error("Error creating correlation:", error);
@@ -1096,7 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const settings = await storage.getUserNotificationSettings(userId);
       res.json(settings);
     } catch (error) {
@@ -1111,7 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
-      
+
       const settings = await storage.updateNotificationSettings(userId, req.body);
       res.json(settings);
     } catch (error) {
