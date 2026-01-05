@@ -1,8 +1,18 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 import { agentService } from "./services/agentService";
+
+// Debugging unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
 
 const app = express();
 
@@ -31,9 +41,9 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration} ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)} `;
       }
 
       if (logLine.length > 80) {
@@ -48,6 +58,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  setupAuth(app);
   const server = await registerRoutes(app);
 
   // Start autonomous agent service
@@ -78,6 +89,6 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`serving on port ${port}`);
+    log(`serving on port ${port} `);
   });
 })();

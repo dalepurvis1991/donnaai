@@ -1,10 +1,14 @@
 import { storage } from "../storage";
 import { gmailApiService } from "./gmailApiService";
+import { outlookApiService } from "./outlookApiService";
 import { taskService } from "./taskService";
 import { correlationService } from "./correlationService";
 import { draftAssistantService } from "./draftAssistantService";
 import { vectorService } from "./vectorService";
-import type { User, Email } from "@shared/schema";
+import { digestService } from "./digestService";
+import { openaiService } from "./openaiService";
+import { memoryService } from "./memoryService";
+import type { User, Email, InsertEmail, TriageMetadata } from "@shared/schema";
 
 export class AgentService {
     private interval: NodeJS.Timeout | null = null;
@@ -12,11 +16,7 @@ export class AgentService {
 
     async start() {
         console.log("Agent Service: Starting autonomous loop...");
-
-        // Run immediately on start
         this.runIteration();
-
-        // Schedule periodic runs
         this.interval = setInterval(() => this.runIteration(), this.POLL_INTERVAL);
     }
 
@@ -31,10 +31,8 @@ export class AgentService {
         console.log(`Agent Service: Iteration started at ${new Date().toISOString()}`);
         try {
             const users = await storage.getUsers();
-            console.log(`Agent Service: Iterating over ${users.length} users`);
-
             for (const user of users) {
-                if (user.googleAccessToken) {
+                if (user.googleAccessToken || user.microsoftAccessToken) {
                     await this.runSuite(user.id);
                 }
             }
@@ -47,22 +45,28 @@ export class AgentService {
         console.log(`Agent Service: Running suite for user ${userId}`);
         try {
             const user = await storage.getUser(userId);
-            if (!user || !user.googleAccessToken) {
-                console.log(`Agent Service: User ${userId} not eligible (no token)`);
-                return;
-            }
+            if (!user || (!user.googleAccessToken && !user.microsoftAccessToken)) return;
 
             // 1. Sync new emails
-            console.log(`Agent Service: Syncing emails for ${userId}...`);
-            const newEmails = await gmailApiService.fetchUserEmails(user, 20); // Sync last 20 emails
-
-            const processedEmails: Email[] = [];
-            for (const emailData of newEmails) {
-                const email = await storage.upsertEmail(emailData);
-                processedEmails.push(email);
+            const emailsToStorage: InsertEmail[] = [];
+            if (user.googleAccessToken) {
+                try {
+                    const googleEmails = await gmailApiService.fetchUserEmails(user, 20);
+                    emailsToStorage.push(...googleEmails);
+                } catch (e) { console.error(`Gmail sync failed: `, e); }
+            }
+            if (user.microsoftAccessToken) {
+                try {
+                    const outlookEmails = await outlookApiService.fetchUserEmails(user, 20);
+                    emailsToStorage.push(...outlookEmails);
+                } catch (e) { console.error(`Outlook sync failed: `, e); }
             }
 
-            // 2. Identify new items (not yet processed by agent)
+            for (const emailData of emailsToStorage) {
+                await storage.upsertEmail(emailData);
+            }
+
+            // 2. Identify new items
             const unprocessed = await storage.getUnprocessedEmails(userId);
             console.log(`Agent Service: Found ${unprocessed.length} unprocessed emails for ${userId}`);
 
@@ -70,56 +74,107 @@ export class AgentService {
                 await this.processEmail(email, user);
             }
 
-            // 3. Update last run time
+            // 3. Post-processing
+            await digestService.generateFyiDigests(userId);
             await storage.updateUserLastAgentRun(userId);
             console.log(`Agent Service: Suite completed for ${userId}`);
         } catch (error) {
-            console.error(`Agent Service: Error running suite for ${userId}:`, error);
+            console.error(`Agent Service: Error: `, error);
         }
     }
 
     private async processEmail(email: Email, user: User) {
-        console.log(`Agent Service: Processing email ${email.id} (${email.subject})`);
+        console.log(`Agent Service: Processing email ${email.id}`);
         try {
-            // A. Vector Indexing (Memory)
+            // Stage 1: Memory & Indexing
             await vectorService.indexEmail(email.id, user.id);
+            const context = await memoryService.getFullContext(user.id);
 
-            // B. Correlation Detection
-            const existingEmails = await storage.getEmails(user.id);
-            const correlations = await correlationService.detectCorrelations(email, existingEmails);
-            if (correlations.length > 0) {
-                await storage.createEmailCorrelations(correlations);
-            }
+            // Stage 2: Triage (Extract & Classify)
+            const triagePrompt = `
+Analyze this email for a business orchestrator (Donna).
+Email: "${email.subject}"
+Body: "${email.body}"
 
-            // C. Task Detection
-            const tasks = await taskService.detectTasksFromEmail(email);
-            for (const task of tasks) {
-                await storage.createTask({
-                    ...task,
+Context:
+- Priorities: ${JSON.stringify(context.operational.priorities)}
+- Risks: ${JSON.stringify(context.operational.risks)}
+
+Extract intent, entities (customer, order, deadline), and classify urgency/impact.
+            `;
+
+            const triage = await openaiService.generateStructuredResponse(triagePrompt, "email_triage", {
+                type: "json_schema",
+                zodSchema: (await import("./openaiService")).TriageSchema,
+                name: "triage"
+            });
+
+            // Stage 3: Decide (Confidence & Policy)
+            const metadata: TriageMetadata = {
+                intent: triage.intent,
+                entities: triage.entities,
+                confidence: triage.confidence,
+                classification: triage.classification
+            };
+
+            const threshold = await memoryService.getEffectiveThreshold(user.id, triage.classification.category);
+
+            // Mandatory gating (Launch Plan v1.0 Section 2)
+            const isMandatoryGate = [
+                'spend',
+                'pricing_change',
+                'publish',
+                'external_comms',
+                'data_change'
+            ].includes(triage.intent || '');
+
+            const needsApproval = isMandatoryGate ||
+                triage.confidence < threshold ||
+                triage.classification.impact === 'high';
+
+            // Stage 4: Queue
+            if (needsApproval) {
+                await storage.createDecision({
                     userId: user.id,
-                    status: 'pending'
+                    type: this.mapIntentToDecisionType(triage.intent),
+                    summary: `Triage requested: ${triage.intent || 'Review required'}. Confidence: ${triage.confidence}`,
+                    riskNotes: triage.classification.impact === 'high' ? 'High impact action detected.' :
+                        isMandatoryGate ? `Mandatory approval required for ${triage.intent}.` : null,
+                    metadata: {
+                        emailId: email.id,
+                        triage,
+                        confidenceUsed: triage.confidence,
+                        thresholdUsed: threshold
+                    }
                 });
-            }
-
-            // D. Proactive Drafting
-            if (email.category === 'Draft') {
-                const draft = await draftAssistantService.generateDraftReply(email.id, user.id);
-                if (draft) {
-                    console.log(`Agent Service: Generated draft for ${email.id}`);
-                    // The draftAssistantService typically saves to its own storage or returns it.
-                    // In our V1, it might just be available in the 'Drafts' section.
+                await storage.createAuditLog(user.id, "Decision Queued", `Email ${email.id} requires manual review.`, email.id);
+            } else {
+                // Autonomous Path
+                await taskService.processEmailForTasks(email.id, email, user.id);
+                if (email.category === 'Draft') {
+                    await draftAssistantService.generateReply(email.id, user.id);
                 }
             }
 
-            // E. Mark as processed
-            await storage.upsertEmail({
-                ...email,
-                isProcessed: true
-            });
+            // Mark Processed
+            const deducted = await storage.deductCredits(user.id, 1, 'email_processing', `Processed: ${email.subject}`);
+            if (deducted) {
+                await storage.upsertEmail({ ...email, triageMetadata: metadata, isProcessed: true });
+            }
 
         } catch (error) {
-            console.error(`Agent Service: Failed to process email ${email.id}:`, error);
+            console.error(`Agent Service: Failed email ${email.id}: `, error);
         }
+    }
+
+    private mapIntentToDecisionType(intent: string | undefined): any {
+        const mapping: Record<string, string> = {
+            'spend': 'spend',
+            'pricing_change': 'pricing',
+            'publish': 'publish',
+            'data_change': 'data_change'
+        };
+        return (intent && mapping[intent]) || 'other';
     }
 }
 

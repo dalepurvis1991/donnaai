@@ -1,5 +1,7 @@
 import { storage } from "../storage";
-import { openaiService } from "./openaiService";
+import { openaiService, TaskDetectionSchema } from "./openaiService";
+import { gmailApiService } from "./gmailApiService";
+import { z } from "zod";
 
 export interface TaskDetectionResult {
   isTask: boolean;
@@ -8,6 +10,7 @@ export interface TaskDetectionResult {
   description?: string;
   category?: string;
   priority?: "low" | "medium" | "high" | "urgent";
+  status?: "proposed" | "pending" | "assigned" | "in_progress" | "completed" | "cancelled" | "verified";
   supplier?: string;
   amount?: number;
   orderNumber?: string;
@@ -18,6 +21,26 @@ export interface TaskDetectionResult {
     emailId?: number;
   }[];
   reasoning?: string;
+  // Enhanced MVP fields
+  brief?: {
+    whatHappened: string;
+    whatNeedsDoing: string;
+    constraints?: string;
+    suggestedNextStep?: string;
+  };
+  evidence?: {
+    quote: string;
+    offsets?: { start: number; end: number };
+  };
+  entities?: {
+    people?: string[];
+    orgs?: string[];
+    orderRefs?: string[];
+    amounts?: number[];
+    dates?: string[];
+  };
+  owner?: "me" | "contact" | "unknown";
+  dueDate?: string;
 }
 
 export interface TaskUpdate {
@@ -40,72 +63,57 @@ export class TaskService {
     try {
       const { subject, body, sender, senderEmail } = emailContent;
 
-      const prompt = `
-Analyze this email to determine if it represents a business task or job that needs tracking:
+      // Get team context for better owner detection
+      const team = await storage.getTeamMembers(userId);
+      const teamContext = team.map(m => `${m.name} (${m.role}): ${m.responsibilities}`).join("\n");
 
+      const prompt = `
+Analyze this email to determine if it represents a business task or job that needs tracking.
 Subject: ${subject}
 From: ${sender} (${senderEmail})
 Body: ${body}
 
-Determine if this email indicates:
-1. A task/job that needs to be done
-2. Purchase orders, procurement needs
-3. Maintenance requests
-4. Administrative tasks
-5. Project requirements
+Team Members & Responsibilities:
+${teamContext}
 
-Look for keywords like: "need to", "require", "order", "buy", "purchase", "fix", "repair", "install", "deliver", "quote", "estimate"
+Determine if this email indicates a task/job, procurement need, maintenance request, etc.
+Extract: Title, Description, Category, Priority, Supplier, Amount, Order Number, Stages.
 
-If this is a task, extract:
-- Task title (concise, actionable)
-- Description 
-- Category (procurement, maintenance, admin, project, etc.)
-- Priority (low, medium, high, urgent)
-- Supplier name if mentioned
-- Amount/cost if mentioned
-- Order number if mentioned
-- Typical stages for this type of task
+--- CEO LAYER JOB BRIEF ---
+- whatHappened: Context/background
+- whatNeedsDoing: Specific action items
+- constraints: Deadlines, budget
+- suggestedNextStep: Next logical action
 
-Respond with JSON in this format:
-{
-  "isTask": boolean,
-  "confidence": number (0-1),
-  "title": "string",
-  "description": "string", 
-  "category": "string",
-  "priority": "low|medium|high|urgent",
-  "supplier": "string",
-  "amount": number,
-  "orderNumber": "string",
-  "stages": [
-    {"stage": "Request sent", "completed": true},
-    {"stage": "Quote received", "completed": false},
-    {"stage": "Order placed", "completed": false},
-    {"stage": "Invoice received", "completed": false},
-    {"stage": "Payment sent", "completed": false}
-  ],
-  "reasoning": "explanation"
-}
-`;
+--- DELEGATION ---
+Identify the best OWNER for this task from the team list above. 
+If no one matches well, use "unknown". If it's for the recipient, use "me".
+
+Respond with JSON in TaskDetectionSchema format.`;
 
       const response = await openaiService.generateStructuredResponse(prompt, "task_detection", {
         type: "json_schema",
-        zodSchema: (openaiService as any).TaskDetectionSchema || z.object({}), // Workaround if I didn't export it
+        zodSchema: (await import("./openaiService")).TaskDetectionSchema,
         name: "task_detection"
       });
 
       return {
         isTask: response.isTask || false,
         confidence: Math.max(0, Math.min(1, response.confidence || 0)),
-        title: response.title,
-        description: response.description,
-        category: response.category,
+        title: response.title || undefined,
+        description: response.description || undefined,
+        category: response.category || undefined,
         priority: response.priority || "medium",
-        supplier: response.supplier,
-        amount: response.amount,
-        orderNumber: response.orderNumber,
-        stages: response.stages || [],
-        reasoning: response.reasoning
+        supplier: response.supplier || undefined,
+        amount: response.amount || undefined,
+        orderNumber: response.orderNumber || undefined,
+        stages: (response.stages as any) || [],
+        reasoning: response.reasoning,
+        brief: response.brief as any,
+        evidence: response.evidence as any,
+        entities: response.entities as any,
+        owner: response.owner as any,
+        dueDate: response.dueDate || undefined
       };
     } catch (error) {
       console.error("Error detecting task from email:", error);
@@ -115,70 +123,23 @@ Respond with JSON in this format:
 
   async updateTaskFromEmail(taskId: number, emailContent: any, userId: string): Promise<TaskUpdate | null> {
     try {
-      // Get existing task
       const task = await storage.getTaskById(taskId);
       if (!task) return null;
 
       const { subject, body, sender, senderEmail } = emailContent;
 
       const prompt = `
-Analyze this email to determine if it updates an existing task:
+Analyze if this email updates the existing task: "${task.title}".
+Current Status: ${task.status}
+New Email: ${subject} from ${sender}
 
-Current Task:
-- Title: ${task.title}
-- Description: ${task.description}
-- Status: ${task.status}
-- Supplier: ${task.supplier || "Unknown"}
-- Order Number: ${task.orderNumber || "None"}
-- Current Stages: ${JSON.stringify(task.stages)}
-
-New Email:
-Subject: ${subject}
-From: ${sender} (${senderEmail})
-Body: ${body}
-
-Determine if this email indicates progress on the task:
-1. Quote/estimate received
-2. Order confirmed/placed
-3. Invoice received
-4. Payment made
-5. Delivery completed
-6. Task completion
-
-Look for keywords like: "quote", "estimate", "order confirmed", "invoice", "payment", "delivered", "completed", "finished"
-
-Respond with JSON:
-{
-  "hasUpdate": boolean,
-  "confidence": number,
-  "status": "pending|in_progress|completed|cancelled",
-  "stages": [updated stages array],
-  "orderNumber": "string if found",
-  "invoiceNumber": "string if found", 
-  "amount": number,
-  "completedAt": "ISO date if completed",
-  "reasoning": "explanation"
-}
+If it's an update, provide the new status and updated stages.
+Respond with JSON.
 `;
 
       const response = await openaiService.generateStructuredResponse(prompt, "task_update", {
         type: "json_schema",
-        zodSchema: z.object({
-          hasUpdate: z.boolean(),
-          confidence: z.number(),
-          status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
-          stages: z.array(z.object({
-            stage: z.string(),
-            completed: z.boolean(),
-            completedAt: z.string().optional(),
-            emailId: z.number().optional()
-          })),
-          orderNumber: z.string().optional(),
-          invoiceNumber: z.string().optional(),
-          amount: z.number().optional(),
-          completedAt: z.string().optional(),
-          reasoning: z.string()
-        }),
+        zodSchema: (await import("./openaiService")).TaskUpdateSchema,
         name: "task_update"
       });
 
@@ -186,10 +147,10 @@ Respond with JSON:
 
       return {
         status: response.status,
-        stages: response.stages.map(s => ({ ...s, completedAt: s.completedAt ? new Date(s.completedAt) : undefined })),
-        orderNumber: response.orderNumber,
-        invoiceNumber: response.invoiceNumber,
-        amount: response.amount,
+        stages: response.stages.map(s => ({ ...s, completedAt: s.completedAt ? new Date(s.completedAt) : undefined, emailId: s.emailId || undefined })),
+        orderNumber: response.orderNumber || undefined,
+        invoiceNumber: response.invoiceNumber || undefined,
+        amount: response.amount || undefined,
         completedAt: response.completedAt ? new Date(response.completedAt) : undefined
       };
     } catch (error) {
@@ -200,17 +161,53 @@ Respond with JSON:
 
   async processEmailForTasks(emailId: number, emailContent: any, userId: string): Promise<void> {
     try {
-      // Check if this email creates a new task
+      const existingTasks = await storage.getUserTasks(userId, ["pending", "in_progress", "assigned", "proposed"]);
       const taskDetection = await this.detectTaskFromEmail(emailId, emailContent, userId);
 
       if (taskDetection.isTask && taskDetection.confidence > 0.7) {
-        // Create new task
+        // ... (existing compaction logic) ...
+        const potentialMatch = existingTasks.find(t =>
+          t.category === taskDetection.category &&
+          t.supplier === taskDetection.supplier &&
+          ((taskDetection.title && t.title.toLowerCase().includes(taskDetection.title.toLowerCase())) ||
+            (taskDetection.title && taskDetection.title.toLowerCase().includes(t.title.toLowerCase())))
+        );
+
+        if (potentialMatch) {
+          await storage.updateTask(potentialMatch.id, {
+            relatedEmails: [...(potentialMatch.relatedEmails || []), emailId],
+            updatedAt: new Date(),
+            jobBrief: potentialMatch.jobBrief ? `${potentialMatch.jobBrief}\n\n[Update ${new Date().toLocaleDateString()}]: ${taskDetection.brief?.whatNeedsDoing || "New activity detected."}` : undefined
+          });
+          return;
+        }
+
+        // --- CEO LAYER AUTO-ASSIGNMENT ---
+        const prefs = await storage.getUserPreferences(userId);
+        const autoAssign = prefs?.autoAssignEnabled || false;
+        let finalStatus: any = "proposed";
+        let assigneeId: number | null = null;
+        let assignmentReason: string | null = null;
+
+        if (autoAssign && taskDetection.confidence > (prefs?.autoApproveThreshold || 0.9)) {
+          console.log(`Auto-assigning task for user ${userId}`);
+          const team = await storage.getTeamMembers(userId);
+          const bestMatch = await this.findBestAssignee(taskDetection, team);
+
+          if (bestMatch) {
+            finalStatus = "assigned";
+            assigneeId = bestMatch.id;
+            assignmentReason = `Auto-assigned based on role: ${bestMatch.role}`;
+          }
+        }
+
         await storage.createTask({
           userId,
           title: taskDetection.title!,
           description: taskDetection.description,
+          status: finalStatus,
           category: taskDetection.category,
-          priority: taskDetection.priority,
+          priority: taskDetection.priority as any,
           detectedFromEmailId: emailId,
           relatedEmails: [emailId],
           autoDetected: true,
@@ -218,15 +215,21 @@ Respond with JSON:
           supplier: taskDetection.supplier,
           amount: taskDetection.amount,
           orderNumber: taskDetection.orderNumber,
-          stages: taskDetection.stages
+          stages: taskDetection.stages as any,
+          jobBrief: taskDetection.brief ? `${taskDetection.brief.whatHappened}\n\nObjectives: ${taskDetection.brief.whatNeedsDoing}\n\nConstraints: ${taskDetection.brief.constraints || "None"}\n\nSuggested Next Step: ${taskDetection.brief.suggestedNextStep || "Pending"}` : undefined,
+          evidenceQuote: taskDetection.evidence?.quote,
+          entities: taskDetection.entities as any,
+          taskOwner: taskDetection.owner as any,
+          assigneeId,
+          assignmentReasoning: assignmentReason,
+          dueDate: taskDetection.dueDate ? new Date(taskDetection.dueDate) : undefined
         });
 
-        console.log(`Created new task: ${taskDetection.title} (confidence: ${taskDetection.confidence})`);
+        console.log(`Created ${finalStatus} task: ${taskDetection.title}`);
+        return;
       }
 
-      // Check if this email updates existing tasks
-      const existingTasks = await storage.getUserTasks(userId, ["pending", "in_progress"]);
-
+      // Check for status updates on existing tasks if not a brand new task match
       for (const task of existingTasks) {
         const update = await this.updateTaskFromEmail(task.id, emailContent, userId);
 
@@ -302,6 +305,61 @@ Respond with JSON:
       console.error("Error getting task summary:", error);
       return { total: 0, pending: 0, inProgress: 0, completed: 0, overdue: 0 };
     }
+  }
+
+  async assignTask(taskId: number, assigneeId: number, assigneeEmail: string, assigneeName: string, userId: string): Promise<boolean> {
+    try {
+      const task = await storage.getTaskById(taskId);
+      if (!task) throw new Error("Task not found");
+
+      const user = await storage.getUser(userId);
+      if (!user) throw new Error("User not found");
+
+      // Generating email body
+      const subject = `New Task: ${task.title}`;
+      const body = `Hi ${assigneeName},\n\nI've assigned you a new task:\n\n${task.title}\n\nDescription:\n${task.description || "No description provided."}\n\nPriority: ${task.priority}\nDue Date: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "None"}\n\nPlease reply to this email when you have an update.\n\nBest,\nDonna AI`;
+
+      if (user.googleAccessToken) {
+        await gmailApiService.sendEmail(user, assigneeEmail, subject, body);
+      } else {
+        console.log("No Google token for assignment email - skipping email send (Outlook send not yet implemented)");
+      }
+
+      await storage.updateTask(taskId, {
+        assigneeId: assigneeId,
+        status: "in_progress",
+        wasAutoAssigned: false,
+        taskOwner: "contact",
+        updatedAt: new Date()
+      });
+
+      await storage.createTaskComment({
+        taskId: taskId,
+        userId: userId,
+        content: `Assigned to ${assigneeName} (${assigneeEmail})`,
+        isSystemGenerated: true
+      });
+
+      console.log(`Task ${taskId} assigned to ${assigneeName}`);
+      return true;
+    } catch (error) {
+      console.error("Error assigning task:", error);
+      return false;
+    }
+  }
+
+  private async findBestAssignee(task: TaskDetectionResult, team: any[]): Promise<any | null> {
+    if (team.length === 0) return null;
+
+    for (const member of team) {
+      if (task.category && member.responsibilities.toLowerCase().includes(task.category.toLowerCase())) {
+        return member;
+      }
+      if (task.title && member.role.toLowerCase().includes(task.title.toLowerCase().split(' ')[0])) {
+        return member;
+      }
+    }
+    return team[0];
   }
 }
 

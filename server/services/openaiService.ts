@@ -7,26 +7,65 @@ import { z } from "zod";
 
 // Schemas for Structured Outputs
 export const CategorizationSchema = z.object({
-  category: z.enum(["FYI", "Draft", "Forward"]),
+  category: z.string(),
   confidence: z.number().min(0).max(100),
+  reasoning: z.string(),
+});
+
+export const TriageSchema = z.object({
+  intent: z.string().optional(),
+  entities: z.object({
+    customer: z.string().optional(),
+    orderRef: z.string().optional(),
+    sku: z.string().optional(),
+    amount: z.number().optional(),
+    deadline: z.string().optional(),
+    riskFlags: z.array(z.string()).optional(),
+  }).optional(),
+  confidence: z.number().min(0).max(1),
+  classification: z.object({
+    category: z.string(),
+    urgency: z.enum(["now", "today", "this_week", "later"]),
+    impact: z.enum(["high", "medium", "low"]),
+  }),
   reasoning: z.string(),
 });
 
 export const TaskDetectionSchema = z.object({
   isTask: z.boolean(),
   confidence: z.number().min(0).max(1),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-  supplier: z.string().optional(),
-  amount: z.number().optional(),
-  orderNumber: z.string().optional(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  category: z.string().nullable(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).nullable(),
+  supplier: z.string().nullable(),
+  amount: z.number().nullable(),
+  orderNumber: z.string().nullable(),
   stages: z.array(z.object({
     stage: z.string(),
     completed: z.boolean()
-  })).optional(),
-  reasoning: z.string()
+  })).nullable(),
+  reasoning: z.string(),
+  // Enhanced MVP fields
+  brief: z.object({
+    whatHappened: z.string(),
+    whatNeedsDoing: z.string(),
+    constraints: z.string().nullable(),
+    suggestedNextStep: z.string().nullable()
+  }).nullable(),
+  evidence: z.object({
+    quote: z.string(),
+    offsets: z.object({ start: z.number(), end: z.number() }).nullable()
+  }).nullable(),
+  entities: z.object({
+    people: z.array(z.string()).nullable(),
+    orgs: z.array(z.string()).nullable(),
+    orderRefs: z.array(z.string()).nullable(),
+    amounts: z.array(z.number()).nullable(),
+    dates: z.array(z.string()).nullable()
+  }).nullable(),
+  owner: z.enum(["me", "contact", "unknown"]).nullable(),
+  dueDate: z.string().nullable()
 });
 
 export const TaskUpdateSchema = z.object({
@@ -36,13 +75,13 @@ export const TaskUpdateSchema = z.object({
   stages: z.array(z.object({
     stage: z.string(),
     completed: z.boolean(),
-    completedAt: z.string().optional(),
-    emailId: z.number().optional()
+    completedAt: z.string().nullable(),
+    emailId: z.number().nullable()
   })),
-  orderNumber: z.string().optional(),
-  invoiceNumber: z.string().optional(),
-  amount: z.number().optional(),
-  completedAt: z.string().optional(),
+  orderNumber: z.string().nullable(),
+  invoiceNumber: z.string().nullable(),
+  amount: z.number().nullable(),
+  completedAt: z.string().nullable(),
   reasoning: z.string()
 });
 
@@ -86,7 +125,7 @@ export const OrderTimelineSchema = z.object({
     details: z.string()
   })),
   nextAction: z.string(),
-  totalValue: z.number().optional()
+  totalValue: z.number().nullable()
 });
 
 export const CorrelationSchema = z.object({
@@ -96,10 +135,10 @@ export const CorrelationSchema = z.object({
     subject: z.string(),
     confidence: z.number().min(0).max(1),
     metadata: z.object({
-      price: z.number().optional(),
-      vendor: z.string().optional(),
-      product: z.string().optional(),
-      notes: z.string().optional()
+      price: z.number().nullable(),
+      vendor: z.string().nullable(),
+      product: z.string().nullable(),
+      notes: z.string().nullable()
     })
   }))
 });
@@ -123,12 +162,12 @@ export class OpenAIService {
     format: { type: string, zodSchema: z.ZodType<T>, name: string }
   ): Promise<T> {
     try {
-      const response = await this.client.beta.chat.completions.parse({
+      const response = await this.client.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: `You are an expert AI assistant analyzing business emails. Context: ${context}`,
+            content: `You are an expert AI assistant analyzing business emails. Context: ${context}. Respond with valid JSON only.`,
           },
           {
             role: "user",
@@ -139,12 +178,14 @@ export class OpenAIService {
         temperature: 0.3,
       });
 
-      const message = response.choices[0].message;
-      if (message.parsed) {
-        return message.parsed;
-      } else {
-        throw new Error("Refused to generate structured output");
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error("OpenAI returned empty response");
       }
+
+      const parsed = JSON.parse(content);
+      return format.zodSchema.parse(parsed);
+
     } catch (error: any) {
       console.error("OpenAI Structured Output error:", error);
       throw new Error(`OpenAI service error: ${error.message}`);
@@ -189,33 +230,99 @@ Generate a reply that:
     }
   }
 
-  async categorizeEmail(subject: string, body: string, sender: string, senderEmail: string): Promise<{ category: string; confidence: number; reasoning: string }> {
+  async categorizeEmail(
+    subject: string,
+    body: string,
+    sender: string,
+    senderEmail: string,
+    categoryMapping: { draft: string; fyi: string; forward: string } = { draft: "Draft", fyi: "FYI", forward: "Forward" }
+  ): Promise<{ category: string; confidence: number; reasoning: string; reasons?: string[]; method?: string }> {
+
+    // Keyword fallback rules for when LLM fails
+    const FALLBACK_RULES = {
+      [categoryMapping.fyi.toLowerCase()]: ["no-reply", "noreply", "receipt", "newsletter", "unsubscribe", "notification", "alert", "automated"],
+      [categoryMapping.draft.toLowerCase()]: ["urgent", "action required", "deadline", "please confirm", "asap", "respond", "waiting for", "need your"],
+      [categoryMapping.forward.toLowerCase()]: ["fwd:", "please share", "for your team", "loop in", "please forward"]
+    };
+
+    const lowerSubject = subject.toLowerCase();
+    const lowerBody = body.toLowerCase();
+    const combinedText = `${lowerSubject} ${lowerBody}`;
+
+    // Try keyword fallback first for obvious cases
+    // Note: This logic assumes keys in FALLBACK_RULES match the desired output category logic
+    // We map back to the display name
+
+    for (const [key, keywords] of Object.entries(FALLBACK_RULES)) {
+      for (const keyword of keywords) {
+        if (combinedText.includes(keyword)) {
+          // Find which mapping this key corresponds to
+          let matchedCategory = categoryMapping.fyi;
+          if (key === categoryMapping.draft.toLowerCase()) matchedCategory = categoryMapping.draft;
+          if (key === categoryMapping.forward.toLowerCase()) matchedCategory = categoryMapping.forward;
+
+          return {
+            category: matchedCategory,
+            confidence: 0.85,
+            reasoning: `Keyword match: ${keyword}`,
+            reasons: [`Matched keyword: "${keyword}"`],
+            method: "fallback_keywords"
+          };
+        }
+      }
+    }
+
     try {
       const prompt = `Analyze this email and categorize it.
       
       Categories:
-      - FYI: Informational emails that don't require action (newsletters, updates, notifications)
-      - Draft: Emails requiring action, response, or follow-up (questions, requests, meetings)
-      - Forward: Emails that should be shared with team/others (important announcements, team updates)
+      - ${categoryMapping.fyi}: Informational emails that don't require action (newsletters, updates, notifications)
+      - ${categoryMapping.draft}: Emails requiring action, response, or follow-up (questions, requests, meetings)
+      - ${categoryMapping.forward}: Emails that should be shared with team/others (important announcements, team updates)
       
       Email Details:
       Subject: ${subject}
       From: ${sender} (${senderEmail})
       Body: ${body.substring(0, 500)}`;
 
-      return await this.generateStructuredResponse(prompt, "email_categorization", {
+      const result = await this.generateStructuredResponse(prompt, "email_categorization", {
         type: "json_schema",
         zodSchema: CategorizationSchema,
         name: "categorization"
       });
-    } catch (error) {
-      console.error("Email categorization error:", error);
+
       return {
-        category: "FYI",
-        confidence: 50,
-        reasoning: "Fallback categorization due to AI error"
+        ...result,
+        reasons: [result.reasoning],
+        method: "llm"
+      };
+    } catch (error) {
+      console.error("Email categorization LLM error, using fallback:", error);
+
+      // Default to FYI if no match
+      return {
+        category: categoryMapping.fyi,
+        confidence: 0.5,
+        reasoning: "Default categorization - no clear signals",
+        reasons: ["No clear categorization signals found"],
+        method: "fallback_default"
       };
     }
+  }
+
+  private matchKeywordCategory(text: string, rules: Record<string, string[]>): { category: string; confidence: number; matchedKeyword: string } | null {
+    for (const [category, keywords] of Object.entries(rules)) {
+      for (const keyword of keywords) {
+        if (text.includes(keyword)) {
+          return {
+            category: category.toUpperCase() === "FYI" ? "FYI" : category.charAt(0).toUpperCase() + category.slice(1),
+            confidence: 0.85,
+            matchedKeyword: keyword
+          };
+        }
+      }
+    }
+    return null;
   }
 
   async generateChatResponse(messages: any[], systemPrompt?: string): Promise<string> {
@@ -289,6 +396,19 @@ Generate a reply that:
       console.error("Error generating embedding:", error);
       throw error;
     }
+  }
+
+  getDailyBriefingSchema() {
+    return z.object({
+      summary: z.string(),
+      questions: z.array(z.object({
+        id: z.string(),
+        text: z.string(),
+        context: z.string(),
+        proposedAction: z.string(),
+        emailId: z.number().nullable()
+      }))
+    });
   }
 }
 

@@ -2,12 +2,17 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { gmailApiService } from "./services/gmailApiService";
+import { outlookApiService } from "./services/outlookApiService";
 import { calendarApiService } from "./services/calendarApiService";
 import { insertEmailSchema, insertCalendarEventSchema } from "@shared/schema";
-import { setupGoogleOnlyAuth, isAuthenticated } from "./googleOnlyAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { digestService } from "./services/digestService";
 import { taskService } from "./services/taskService";
+import { briefingService } from "./services/briefingService";
 import { correlationService } from "./services/correlationService";
+import { vectorService } from "./services/vectorService";
+
+import { requirePlan, FEATURES, PLANS } from "./middleware/tierMiddleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add debug logging for all requests
@@ -16,8 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Set up Google-only authentication 
-  setupGoogleOnlyAuth(app);
+  // Authentication is set up in index.ts via setupAuth
 
   // Debug route to test callback URL
   app.get('/api/test-callback', (req, res) => {
@@ -29,10 +33,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // FYI Digest Routes
+  app.post('/api/digests/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      await digestService.generateFyiDigests(userId);
+      res.json({ message: "FYI Digests generated" });
+    } catch (error) {
+      console.error("Error generating digests:", error);
+      res.status(500).json({ message: "Failed to generate digests" });
+    }
+  });
+
+  app.get('/api/digests/fyi', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const digests = await storage.getFyiDigests(userId, 'active');
+      res.json(digests);
+    } catch (error) {
+      console.error("Error fetching digests:", error);
+      res.status(500).json({ message: "Failed to fetch digests" });
+    }
+  });
+
+  app.post('/api/digests/fyi/:id/dismiss', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.updateFyiDigest(parseInt(req.params.id), { status: 'dismissed' });
+      res.json({ message: "Digest dismissed" });
+    } catch (error) {
+      console.error("Error dismissing digest:", error);
+      res.status(500).json({ message: "Failed to dismiss digest" });
+    }
+  });
+
+  // Briefing & AI Learning routes
+  app.get('/api/briefing', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || (req.session as any)?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "User not identified" });
+      }
+      const briefing = await briefingService.generateDailyBriefing(userId);
+      res.json(briefing);
+    } catch (error) {
+      console.error("Error fetching briefing:", error);
+      res.status(500).json({ message: "Failed to generate briefing" });
+    }
+  });
+
+  app.post('/api/agent/feedback', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || (req.session as any)?.userId;
+      const { trigger, correction } = req.body;
+      if (!userId) return res.status(401).json({ message: "User not identified" });
+
+      await briefingService.handleUserFeedback(userId, trigger, correction);
+      res.json({ message: "Feedback recorded. My thinking has been updated." });
+    } catch (error) {
+      console.error("Error recording feedback:", error);
+      res.status(500).json({ message: "Failed to register feedback" });
+    }
+  });
+
   // Task management routes
   app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const statuses = req.query.status ? [req.query.status] : undefined;
       const tasks = await storage.getUserTasks(userId, statuses);
       res.json(tasks);
@@ -44,12 +110,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const task = await storage.createTask({ ...req.body, userId });
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);
       res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.post('/api/tasks/:id/assign', isAuthenticated, requirePlan(FEATURES.DELEGATIONS), async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const { assigneeId } = req.body;
+      const userId = req.user.id;
+
+      if (!assigneeId) {
+        return res.status(400).json({ message: "Assignee ID required" });
+      }
+
+      // Fetch team member details
+      const teamMembers = await storage.getTeamMembers(userId);
+      const assignee = teamMembers.find(t => t.id === assigneeId);
+
+      if (!assignee) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      if (!assignee.email) {
+        return res.status(400).json({ message: "Team member has no email address" });
+      }
+
+      await taskService.assignTask(taskId, assigneeId, assignee.email, assignee.name, userId);
+      res.json({ message: "Task assigned successfully" });
+    } catch (error) {
+      console.error("Error assigning task:", error);
+      res.status(500).json({ message: "Failed to assign task" });
     }
   });
 
@@ -98,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tasks/:id/comments', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const comment = await storage.createTaskComment({
         ...req.body,
         taskId: parseInt(req.params.id),
@@ -114,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email processing for task detection
   app.post('/api/tasks/process-email', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { emailId, emailContent } = req.body;
 
       await taskService.processEmailForTasks(emailId, emailContent, userId);
@@ -126,13 +222,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
+  // DEBUG: Test team member insert (REMOVE IN PRODUCTION)
+  // ============================================
+  app.get('/api/test-team-insert', async (req, res) => {
+    try {
+      // First ensure demo user exists
+      const demoUser = await storage.upsertUser({
+        id: 'demo-user-123',
+        email: 'demo@donnaai.co.uk',
+        firstName: 'Demo',
+        lastName: 'User',
+        googleAccessToken: '',
+        googleRefreshToken: ''
+      });
+      console.log("Demo user verified:", demoUser.id);
+
+      // Attempt to create a team member
+      const member = await storage.createTeamMember({
+        userId: 'demo-user-123',
+        name: 'Test Member',
+        email: 'test@example.com',
+        jobTitle: 'Tester',
+        role: 'testing',
+        responsibilities: 'Testing the team member creation',
+        skills: ['testing', 'debugging'],
+        signOffLimit: 500,
+        isActive: true
+      });
+
+      res.json({ success: true, member });
+    } catch (error: any) {
+      console.error("Test insert error:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+        detail: error.detail,
+        stack: error.stack?.split('\n').slice(0, 5)
+      });
+    }
+  });
+
+  // ============================================
   // TEAM MEMBER ROUTES
   // ============================================
 
   // Get all team members for the user
   app.get('/api/team-members', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
       const members = await storage.getTeamMembers(userId);
       res.json(members);
     } catch (error) {
@@ -156,22 +297,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new team member
-  app.post('/api/team-members', isAuthenticated, async (req: any, res) => {
+  app.post('/api/team-members', isAuthenticated, requirePlan(FEATURES.DELEGATIONS), async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
-      const member = await storage.createTeamMember({
+      // Get userId from multiple possible sources (Google OAuth or demo login)
+      const userId = req.user.id;
+      console.log("Creating team member for userId:", userId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      if (!userId) {
+        console.error("No userId found in request");
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const memberData = {
         ...req.body,
-        userId
-      });
+        userId,
+        isActive: true
+      };
+      console.log("Member data to insert:", JSON.stringify(memberData, null, 2));
+
+      const member = await storage.createTeamMember(memberData);
+      console.log("Team member created successfully:", member.id);
       res.json(member);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating team member:", error);
-      res.status(500).json({ message: "Failed to create team member" });
+      console.error("Error message:", error.message);
+      res.status(500).json({ message: "Failed to create team member", error: error.message });
     }
   });
 
   // Update a team member
-  app.put('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/team-members/:id', isAuthenticated, requirePlan(FEATURES.DELEGATIONS), async (req: any, res) => {
     try {
       const member = await storage.updateTeamMember(parseInt(req.params.id), req.body);
       res.json(member);
@@ -182,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a team member
-  app.delete('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/team-members/:id', isAuthenticated, requirePlan(FEATURES.DELEGATIONS), async (req: any, res) => {
     try {
       await storage.deleteTeamMember(parseInt(req.params.id));
       res.json({ message: "Team member deleted" });
@@ -199,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all projects for the user
   app.get('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
       const projectList = await storage.getProjects(userId);
       res.json(projectList);
     } catch (error) {
@@ -217,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stages = await storage.getProjectStages(project.id);
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
       const projectTasks = await storage.getUserTasks(userId);
       const tasksInProject = projectTasks.filter((t: any) => t.projectId === project.id);
 
@@ -235,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new project
   app.post('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
       const project = await storage.createProject({
         ...req.body,
         userId
@@ -321,42 +477,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
-  // APPROVAL WORKFLOW ROUTES
+  // DECISION QUEUE ROUTES
   // ============================================
 
-  // Get tasks pending approval
-  app.get('/api/approvals/pending', isAuthenticated, async (req: any, res) => {
+  app.get('/api/decisions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
-      const pendingTasks = await storage.getPendingApprovalTasks(userId);
-      res.json(pendingTasks);
+      const userId = req.user.id;
+      const status = req.query.status as string || 'pending';
+      const decisionList = await storage.getDecisions(userId, status);
+      res.json(decisionList);
     } catch (error) {
-      console.error("Error fetching pending approvals:", error);
-      res.status(500).json({ message: "Failed to fetch pending approvals" });
+      console.error("Error fetching decisions:", error);
+      res.status(500).json({ message: "Failed to fetch decisions" });
     }
   });
 
-  // Approve a task
-  app.post('/api/tasks/:id/approve', isAuthenticated, async (req: any, res) => {
+  app.post('/api/decisions/:id/resolve', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
-      const task = await storage.approveTask(parseInt(req.params.id), userId);
-      res.json(task);
+      const decisionId = parseInt(req.params.id);
+      const { status, feedback } = req.body;
+      const userId = req.user.id;
+
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const decision = await storage.getDecisionById(decisionId);
+      if (!decision) return res.status(404).json({ message: "Decision not found" });
+
+      const updated = await storage.updateDecision(decisionId, {
+        status,
+        resolvedAt: new Date(),
+        decisionTaken: feedback // Use decisionTaken field for feedback
+      });
+
+      // Business Logic Hook: What happens after approval?
+      if (status === 'approved') {
+        const metadata = decision.metadata as any;
+        if (decision.type === 'task_approval' && metadata?.emailId) {
+          await taskService.processEmailForTasks(metadata.emailId, {}, userId);
+        }
+      }
+
+      const meta = decision.metadata as any;
+      await storage.createAuditLog(userId, `Decision ${status}`, `Resolved decision ${decisionId}: ${decision.summary}`, meta?.emailId, meta?.taskId, decisionId);
+
+      res.json(updated);
     } catch (error) {
-      console.error("Error approving task:", error);
-      res.status(500).json({ message: "Failed to approve task" });
+      console.error("Error resolving decision:", error);
+      res.status(500).json({ message: "Failed to resolve decision" });
     }
   });
 
-  // Reject a task
-  app.post('/api/tasks/:id/reject', isAuthenticated, async (req: any, res) => {
+  // ============================================
+  // ORCHESTRATOR DASHBOARD ROUTES
+  // ============================================
+
+  app.get('/api/orchestrator/brief', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
-      const task = await storage.rejectTask(parseInt(req.params.id), userId);
-      res.json(task);
+      const userId = req.user.id;
+      const today = new Date();
+
+      // Fetch data for the brief
+      // Note: we can optimize this with specific count queries later
+      const [emails, pendingDecisions, tasks] = await Promise.all([
+        storage.getEmails(userId),
+        storage.getDecisions(userId, 'pending'),
+        storage.getUserTasks(userId)
+      ]);
+
+      const unreadCount = emails.filter(e => !e.isRead).length;
+      const activeTasks = tasks.filter(t => t.status !== 'completed');
+
+      const brief = {
+        donnaVoice: `Here is your summary for ${today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`,
+        priorities: pendingDecisions.slice(0, 3).map(d => ({
+          id: d.id,
+          title: d.summary || "Pending Decision",
+          type: d.type || "review",
+          level: d.priority || "medium"
+        })),
+        decisionsCount: pendingDecisions.length,
+        delegationsCount: activeTasks.length,
+        emailCount: unreadCount,
+        // Also pass raw priorities if the UI expects 'activePriorities'
+        activePriorities: pendingDecisions.slice(0, 5)
+      };
+
+      res.json(brief);
     } catch (error) {
-      console.error("Error rejecting task:", error);
-      res.status(500).json({ message: "Failed to reject task" });
+      console.error("Error fetching orchestrator brief:", error);
+      res.status(500).json({ message: "Failed to generate brief" });
     }
   });
 
@@ -367,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user preferences
   app.get('/api/user-preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
       const prefs = await storage.getUserPreferences(userId);
       res.json(prefs || {
         autoAssignEnabled: false,
@@ -382,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user preferences
   app.put('/api/user-preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id || req.user?.claims?.sub;
+      const userId = req.user.id;
       const prefs = await storage.updateUserPreferences(userId, req.body);
       res.json(prefs);
     } catch (error) {
@@ -416,8 +627,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sessionId: session?.id,
       userId: session?.userId,
       isAuthenticated: !!session?.userId,
+      plan: (req.user as any)?.planType,
       sessionData: session ? Object.keys(session) : []
     });
+  });
+
+  // Billing / Trial Routes
+  app.post('/api/billing/start-trial', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (user.planType !== PLANS.FREE) {
+        return res.status(400).json({ message: "User is already on a plan or trial" });
+      }
+
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 7); // 7 days from now
+
+      const updatedUser = await storage.upsertUser({
+        ...user,
+        planType: PLANS.TRIAL,
+        trialEndsAt
+      });
+
+      res.json({
+        message: "Trial started successfully",
+        planType: updatedUser.planType,
+        trialEndsAt: updatedUser.trialEndsAt
+      });
+    } catch (error) {
+      console.error("Error starting trial:", error);
+      res.status(500).json({ message: "Failed to start trial" });
+    }
+  });
+
+  // Orchestrator Briefing Endpoint
+  app.get('/api/orchestrator/brief', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+
+      const [
+        priorities,
+        decisions,
+        tasks,
+        projects,
+        stats
+      ] = await Promise.all([
+        storage.getOperationalMemory(userId, "priorities"),
+        storage.getDecisions(userId, "pending"),
+        storage.getUserTasks(userId),
+        storage.getUsersProjects ? storage.getUsersProjects(userId) : Promise.resolve([]),
+        storage.getEmailStats(userId)
+      ]);
+
+      const activeDelegations = tasks.filter(t =>
+        ['assigned', 'in_progress'].includes(t.status || '')
+      );
+
+      res.json({
+        priorities: priorities?.value || [],
+        decisionsCount: decisions.length,
+        delegationsCount: activeDelegations.length,
+        projectsCount: Array.isArray(projects) ? projects.length : 0,
+        emailCount: stats.totalEmails,
+        donnaVoice: `Based on ${stats.totalEmails} emails, ${Array.isArray(projects) ? projects.length : 0} projects, and ${activeDelegations.length} delegations.`
+      });
+    } catch (error) {
+      console.error("Error fetching orchestrator brief:", error);
+      res.status(500).json({ message: "Failed to fetch daily brief" });
+    }
+  });
+
+  // Audit Log Endpoint
+  app.get('/api/audit-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const logs = await storage.getAuditLogs(req.user.id);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const profile = await storage.getUserProfile(userId);
+      res.json({
+        completed: profile?.onboardingCompleted || false,
+        step: profile?.onboardingStep || 0
+      });
+    } catch (error) {
+      console.error("Error fetching onboarding status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const formData = req.body;
+
+      const profile = await storage.updateUserProfile(userId, {
+        ...formData,
+        onboardingCompleted: true,
+        onboardingStep: 5
+      });
+
+      await storage.createAuditLog(userId, "Onboarding Completed", "User finished onboarding wizard");
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
   });
 
   // Demo user for testing (temporary)
@@ -426,7 +752,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const demoUser = await storage.upsertUser({
         id: 'demo-user-123',
         email: 'demo@donnaai.co.uk',
-        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
         googleAccessToken: '',
         googleRefreshToken: ''
       });
@@ -454,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.json({
@@ -463,11 +790,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const emailConnected = await gmailApiService.testConnection(user);
+      const googleConnected = await gmailApiService.testConnection(user);
+      const microsoftConnected = await outlookApiService.testConnection(user);
       const calendarConnected = await calendarApiService.testConnection(user);
+
       res.json({
         status: "ok",
-        emailConnection: emailConnected ? "connected" : "disconnected",
+        googleAccount: googleConnected ? "connected" : "disconnected",
+        microsoftAccount: microsoftConnected ? "connected" : "disconnected",
         calendarConnection: calendarConnected ? "connected" : "disconnected"
       });
     } catch (error) {
@@ -507,12 +837,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         senderEmail: email.senderEmail,
         date: new Date(email.date).toISOString(),
         category: email.category,
+        isRead: email.isRead,
       });
+
+      const allEmails = await storage.getEmails(userId);
 
       res.json({
         fyi: fyiEmails.map(formatEmail),
         draft: draftEmails.map(formatEmail),
         forward: forwardEmails.map(formatEmail),
+        totalTraces: allEmails.length
       });
     } catch (error) {
       res.status(500).json({
@@ -522,53 +856,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk process emails for learning context
+  // Bulk process emails for learning context
   app.post("/api/emails/bulk-process", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub || req.user?.id;
+      console.log('Starting bulk process...');
+      const userId = req.user.id;
       if (!userId) {
+        console.log('Bulk process failed: No user ID');
         return res.status(401).json({ message: "User ID not found" });
       }
 
+      console.log(`Fetching user ${userId}...`);
       const user = await storage.getUser(userId);
       if (!user?.googleAccessToken) {
+        console.log('Bulk process failed: No Google token');
         return res.status(400).json({
           message: "Gmail access not granted. Please log in again to grant Gmail permission."
         });
       }
 
-      const { limit = 1000 } = req.body;
+      const { limit = 15, pageToken, reset = false } = req.body;
+      const pageSize = Math.min(limit, 50); // Safety cap
+      console.log(`Bulk processing batch: size=${pageSize}, reset=${reset}, hasPageToken=${!!pageToken}`);
 
-      // Clear existing emails first
-      await storage.clearEmails(userId);
+      // Clear existing emails if requested
+      if (reset) {
+        console.log('Clearing existing emails (reset requested)...');
+        await storage.clearEmails(userId);
+      }
 
-      // Fetch large number of emails for learning context
+      console.log('Importing services...');
       const { gmailApiService } = await import("./services/gmailApiService");
-      const newEmails = await gmailApiService.fetchUserEmails(user, limit);
+      const { vectorService } = await import("./services/vectorService");
 
-      // Store new emails and process for learning
+      console.log('Fetching email page from Gmail...');
+      const { emails: newEmails, nextPageToken } = await gmailApiService.fetchEmailsPage(user, pageSize, pageToken);
+      console.log(`Fetched ${newEmails.length} emails. Next page available: ${!!nextPageToken}`);
+
+      // Store new emails
+      console.log('Storing emails in database...');
       const createdEmails = [];
       for (const email of newEmails) {
         const createdEmail = await storage.upsertEmail(email);
         createdEmails.push(createdEmail);
       }
+      console.log(`Stored ${createdEmails.length} emails`);
 
-      // Index emails for vector search
+      // Index emails for vector search (consider optimizing this to batch later)
       try {
-        const { vectorService } = await import("./services/vectorService");
-        await vectorService.indexAllUserEmails(userId);
-      } catch (error) {
-        console.log("Vector indexing not available:", error.message);
+        if (createdEmails.length > 0) {
+          console.log('Indexing emails for vector search...');
+          // Ideally we should index only new ones, but for now we index all or trigger user re-index.
+          // Since indexAllUserEmails might be heavy, we might want to skip it during intermediate batches if possible.
+          // But to ensure "immediate results", we run it.
+          await vectorService.indexAllUserEmails(userId);
+          console.log('Vector indexing completed');
+        }
+      } catch (error: any) {
+        console.log("Vector indexing warning:", error.message);
+        // Don't fail the request if indexing fails
       }
 
       res.json({
-        message: "Bulk processing completed successfully",
-        processed: newEmails.length,
-        limit
+        processed: createdEmails.length,
+        nextPageToken,
+        message: `Processed ${createdEmails.length} emails`
       });
     } catch (error) {
-      console.error('Bulk processing error:', error);
+      console.error('Bulk processing CRITICAL error:', error);
+      if (error instanceof Error) {
+        console.error('Stack:', error.stack);
+      }
       res.status(500).json({
-        message: error instanceof Error ? error.message : "Failed to process emails in bulk"
+        message: error instanceof Error ? error.message : "Failed to process emails in bulk",
+        details: error instanceof Error ? error.stack : String(error)
       });
     }
   });
@@ -601,9 +962,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Clear existing emails
-      await storage.clearEmails(userId);
-
       // Fetch new emails from Gmail API
       const emailCount = req.body?.count || 50; // Default 50, allow user preference
       const newEmails = await gmailApiService.fetchUserEmails(user, emailCount);
@@ -611,7 +969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store new emails and detect correlations
       const createdEmails = [];
       for (const email of newEmails) {
-        const createdEmail = await storage.createEmail(email);
+        const createdEmail = await storage.upsertEmail(email);
         createdEmails.push(createdEmail);
       }
 
@@ -632,18 +990,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-      } catch (correlationError) {
+      } catch (correlationError: any) {
         console.log("Correlation detection skipped:", correlationError.message);
       }
 
       const stats = await storage.getEmailStats(userId);
 
-      res.json({
-        message: "Emails refreshed successfully",
-        count: newEmails.length,
-        stats
-      });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Email refresh error:', error);
       res.status(500).json({
         message: error instanceof Error ? error.message : "Failed to refresh emails"
@@ -660,6 +1013,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({
         message: error instanceof Error ? error.message : "Failed to get emails"
+      });
+    }
+  });
+
+  app.put("/api/emails/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { isRead } = req.body;
+      const updatedEmail = await storage.markEmailAsRead(id, isRead);
+      res.json(updatedEmail);
+    } catch (error) {
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to mark email as read"
       });
     }
   });
@@ -842,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { ragService } = await import("./services/ragService");
         const contextEmails = await ragService.searchSimilarEmails(userId, email.subject + " " + email.body, 5);
         businessContext = contextEmails.map(e => `${e.subject}: ${e.body.substring(0, 200)}`).join("\n");
-      } catch (error) {
+      } catch (error: any) { // Added type annotation for error
         console.log("RAG context not available:", error.message);
       }
 
@@ -880,7 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: "medium",
         category: "email_followup",
         autoDetected: false,
-        emailId: emailId
+        detectedFromEmailId: emailId
       });
 
       res.json(task);
@@ -972,33 +1338,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk email processing route (Pro feature)
-  app.post("/api/emails/bulk-process", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ message: "User ID not found" });
-      }
-
-      const { limit = 1000 } = req.body;
-
-      // Fetch large batch of emails from Gmail
-      const emails = await gmailApiService.fetchEmailsInBatch(req.user, limit);
-
-      // Process for RAG system
-      const { ragService } = await import("./services/ragService");
-      await ragService.processEmailsForLearning(userId, emails);
-
-      res.json({
-        processed: emails.length,
-        message: `Successfully processed ${emails.length} emails for learning`
-      });
-    } catch (error) {
-      console.error("Error processing bulk emails:", error);
-      res.status(500).json({ message: "Failed to process bulk emails" });
-    }
-  });
-
   // Chat API routes
   app.get("/api/chat/messages", isAuthenticated, async (req: any, res) => {
     try {
@@ -1011,6 +1350,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching chat messages:", error);
       res.status(500).json({ message: "Failed to fetch chat messages" });
+    }
+  });
+
+  app.delete("/api/chat/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      await storage.clearChatMessages(userId);
+      res.json({ message: "Chat session cleared" });
+    } catch (error) {
+      console.error("Error clearing chat messages:", error);
+      res.status(500).json({ message: "Failed to clear chat session" });
     }
   });
 
@@ -1374,6 +1727,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating notification settings:", error);
       res.status(500).json({ message: "Failed to update notification settings" });
+    }
+  });
+
+  // Memory Vault routes
+  app.get("/api/memories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const memories = await vectorService.getUserMemories(userId);
+      res.json(memories);
+    } catch (error) {
+      console.error("Error fetching memories:", error);
+      res.status(500).json({ message: "Failed to fetch memories" });
+    }
+  });
+
+  app.post("/api/memories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+
+      const noteId = Date.now().toString();
+      await vectorService.indexNote(noteId, content, userId);
+
+      res.json({ message: "Note indexed successfully", id: noteId });
+    } catch (error) {
+      console.error("Error creating memory note:", error);
+      res.status(500).json({ message: "Failed to create memory note" });
+    }
+  });
+
+  app.get("/api/memories/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      const results = await vectorService.searchMemories(q as string, userId, 12);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching memories:", error);
+      res.status(500).json({ message: "Failed to search memories" });
+    }
+  });
+
+  // Privacy & Data Management API routes (Phase 8)
+  app.delete("/api/user/data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      await storage.deleteAllUserData(userId);
+      await storage.createAuditLog(userId, "Data Deletion", "User requested full data wipe");
+      res.json({ message: "All user data has been deleted" });
+    } catch (error) {
+      console.error("Error deleting user data:", error);
+      res.status(500).json({ message: "Failed to delete user data" });
+    }
+  });
+
+  app.delete("/api/user/style-profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      await storage.resetUserProfile(userId);
+      await storage.createAuditLog(userId, "Profile Reset", "User requested style profile reset");
+      res.json({ message: "User style profile has been reset" });
+    } catch (error) {
+      console.error("Error resetting style profile:", error);
+      res.status(500).json({ message: "Failed to reset style profile" });
+    }
+  });
+
+  app.get("/api/user/audit-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const logs = await storage.getAuditLogs(userId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/user/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const emails = await storage.getEmails(userId);
+      const tasks = await storage.getUserTasks(userId);
+      const profile = await storage.getUserProfile(userId);
+      const history = await storage.getAuditLogs(userId);
+
+      const exportData = {
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+        },
+        profile,
+        emails,
+        tasks,
+        history,
+        exportedAt: new Date().toISOString()
+      };
+
+      await storage.createAuditLog(userId, "Data Export", "User requested full data export");
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=donna-ai-export-${userId}.json`);
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting user data:", error);
+      res.status(500).json({ message: "Failed to export user data" });
     }
   });
 

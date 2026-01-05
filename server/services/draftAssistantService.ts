@@ -21,11 +21,11 @@ export class DraftAssistantService {
   async generateReply(emailId: number, userId: string, userInput?: string): Promise<DraftSuggestion> {
     try {
       const context = await this.buildReplyContext(emailId, userId);
-      
+
       const prompt = this.buildReplyPrompt(context, userInput);
-      
+
       // Generate reply using OpenAI
-      const response = await openaiService.generateChatResponse(prompt, 
+      const response = await openaiService.generateChatResponse(prompt,
         userInput || "Generate a professional reply to this email"
       );
 
@@ -37,15 +37,15 @@ export class DraftAssistantService {
   }
 
   async generateEmailDraft(
-    to: string, 
-    subject: string, 
-    context: string, 
+    to: string,
+    subject: string,
+    context: string,
     userId: string,
     tone: "professional" | "casual" | "friendly" | "formal" = "professional"
   ): Promise<DraftSuggestion> {
     try {
       const userPreferences = await storage.getUserSettings(userId);
-      
+
       // Search for similar emails for context
       const similarEmails = await vectorService.searchMemories(
         `${subject} ${context}`, userId, 3
@@ -61,9 +61,9 @@ Tone: ${tone}
 User preferences: ${JSON.stringify(userPreferences?.emailRules || {})}
 
 Similar emails from history:
-${similarEmails.map(email => 
-  `Subject: ${email.document.metadata.subject}\nContent: ${email.document.text.slice(0, 200)}...`
-).join('\n\n')}
+${similarEmails.map(email =>
+        `Subject: ${email.document.metadata.subject}\nContent: ${email.document.text.slice(0, 200)}...`
+      ).join('\n\n')}
 
 Generate a well-structured email that:
 1. Has an appropriate subject line
@@ -82,7 +82,7 @@ Respond in JSON format:
 }`;
 
       const response = await openaiService.generateChatResponse(prompt, "Generate the email draft");
-      
+
       try {
         const parsed = JSON.parse(response);
         return {
@@ -117,14 +117,14 @@ Respond in JSON format:
   private async buildReplyContext(emailId: number, userId: string): Promise<ReplyContext> {
     const originalEmail = await storage.getEmailById(emailId);
     const userPreferences = await storage.getUserSettings(userId);
-    
+
     // Find similar emails for context
     const similarEmails = await vectorService.searchMemories(
       originalEmail.subject, userId, 3
     );
 
     // Get conversation history (emails from same sender)
-    const allEmails = await storage.getEmails();
+    const allEmails = await storage.getEmails(userId);
     const conversationHistory = allEmails
       .filter(email => email.senderEmail === originalEmail.senderEmail)
       .slice(0, 5);
@@ -149,14 +149,14 @@ USER PREFERENCES:
 ${JSON.stringify(context.userPreferences?.emailRules || {})}
 
 CONVERSATION HISTORY:
-${context.conversationHistory.map(email => 
-  `Date: ${email.date}\nFrom: ${email.sender}\nSubject: ${email.subject}\n`
-).join('\n')}
+${context.conversationHistory.map(email =>
+      `Date: ${email.date}\nFrom: ${email.sender}\nSubject: ${email.subject}\n`
+    ).join('\n')}
 
 SIMILAR EMAILS:
-${context.similarEmails.map(email => 
-  `Subject: ${email.metadata.subject}\nContent: ${email.text.slice(0, 150)}...`
-).join('\n\n')}
+${context.similarEmails.map(email =>
+      `Subject: ${email.metadata.subject}\nContent: ${email.text.slice(0, 150)}...`
+    ).join('\n\n')}
 
 ${userInput ? `USER INPUT: ${userInput}` : ''}
 

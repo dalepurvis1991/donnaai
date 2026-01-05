@@ -10,8 +10,15 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        display: ["Space Grotesk", "sans-serif"],
+        body: ["Noto Sans", "sans-serif"],
+        sans: ["Noto Sans", "sans-serif"],
+      },
       colors: {
         background: "var(--background)",
+        "background-light": "#f6f7f8",
+        "background-dark": "#101922",
         foreground: "var(--foreground)",
         card: {
           DEFAULT: "var(--card)",
@@ -22,8 +29,9 @@ export default {
           foreground: "var(--popover-foreground)",
         },
         primary: {
-          DEFAULT: "var(--primary)",
+          DEFAULT: "#137fec",
           foreground: "var(--primary-foreground)",
+          hover: "#116fd0",
         },
         secondary: {
           DEFAULT: "var(--secondary)",
@@ -44,6 +52,19 @@ export default {
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
+        "card-dark": "#192633",
+        "border-dark": "#324d67",
+        "accent-purple": "#8b5cf6",
+        "accent-amber": "#f59e0b",
+        "accent-rose": "#f43f5e",
+        "accent-emerald": "#10b981",
+        "surface-dark": "#111a22",
+        "fyi-bg": "rgba(59, 130, 246, 0.1)",
+        "fyi-text": "#60a5fa",
+        "draft-bg": "rgba(245, 158, 11, 0.1)",
+        "draft-text": "#fbbf24",
+        "forward-bg": "rgba(16, 185, 129, 0.1)",
+        "forward-text": "#34d399",
         chart: {
           "1": "var(--chart-1)",
           "2": "var(--chart-2)",
@@ -61,6 +82,10 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
+      },
+      boxShadow: {
+        glow: "0 0 20px rgba(25, 79, 240, 0.15)",
+        card: "0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)",
       },
       keyframes: {
         "accordion-down": {

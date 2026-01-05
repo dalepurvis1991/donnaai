@@ -1,0 +1,10 @@
+Starting debug script...
+Testing with user: dalepurvis@floorgiants.co.uk (103432382345425460438)
+1. Clearing emails...
+Emails cleared.
+2. Fetching emails from Gmail...
+ERROR: CRITICAL ERROR: Error: Failed to fetch emails: invalid_grant
+STACK: Error: Failed to fetch emails: invalid_grant
+    at GmailApiService.fetchUserEmails (C:\Users\dalep\OneDrive\Desktop\donnaai\server\services\gmailApiService.ts:70:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async runDebug (C:\Users\dalep\OneDrive\Desktop\donnaai\debug-bulk.ts:50:27)

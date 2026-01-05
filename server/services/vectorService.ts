@@ -168,7 +168,7 @@ export class VectorService {
 
   async indexAllUserEmails(userId: string): Promise<void> {
     try {
-      const emails = await storage.getEmails();
+      const emails = await storage.getEmails(userId);
 
       for (const email of emails) {
         await this.indexEmail(email.id, userId);

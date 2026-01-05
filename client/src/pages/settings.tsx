@@ -1,355 +1,274 @@
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
-
-interface EmailRule {
-  id?: string;
-  email?: string;
-  pattern?: string;
-  category: "FYI" | "Draft" | "Forward";
-  confidence: number;
-  type: "sender" | "subject";
-}
-
-interface UserSettings {
-  emailRules: {
-    senderRules: { email: string; category: string; confidence: number }[];
-    subjectRules: { pattern: string; category: string; confidence: number }[];
-    generalPreferences: {
-      prioritizePersonal: boolean;
-      autoForwardCustomerService: boolean;
-      treatNewslettersAsFYI: boolean;
-    };
-  };
-}
+import { apiRequest } from "@/lib/queryClient";
+import { UserPreferences } from "@shared/schema";
+import { useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 
 export default function Settings() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [newRule, setNewRule] = useState<Partial<EmailRule>>({
-    type: "sender",
-    category: "FYI",
-    confidence: 95,
+
+  const [autonomyLevel, setAutonomyLevel] = useState(2); // 0: Manual, 1: Assisted, 2: Autonomous
+
+  const { data: preferences, isLoading } = useQuery<UserPreferences>({
+    queryKey: ["/api/user/preferences"],
   });
 
-  // Fetch user settings
-  const { data: settings, isLoading: settingsLoading } = useQuery<UserSettings>({
-    queryKey: ["/api/settings"],
-    enabled: isAuthenticated,
-  });
-
-  // Update settings mutation
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (updatedSettings: UserSettings) => {
-      const response = await apiRequest("PUT", "/api/settings", updatedSettings);
-      return response.json();
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (newPrefs: Partial<UserPreferences>) => {
+      const res = await apiRequest("PATCH", "/api/user/preferences", newPrefs);
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       toast({
-        title: "Settings updated",
-        description: "Your email categorization rules have been saved.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
+        title: "Preferences Updated",
+        description: "Donna's core behavior has been adjusted.",
       });
     },
   });
 
-  const addRule = () => {
-    if (!settings || !newRule.category) return;
-
-    const updatedSettings = { ...settings };
-    
-    if (newRule.type === "sender" && newRule.email) {
-      updatedSettings.emailRules.senderRules.push({
-        email: newRule.email,
-        category: newRule.category,
-        confidence: newRule.confidence || 95,
+  // Trial Activation mutation
+  const startTrialMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/billing/start-trial");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Trial Activated!",
+        description: `Your Pro trial ends on ${new Date(data.trialEndsAt).toLocaleDateString()}`,
       });
-    } else if (newRule.type === "subject" && newRule.pattern) {
-      updatedSettings.emailRules.subjectRules.push({
-        pattern: newRule.pattern,
-        category: newRule.category,
-        confidence: newRule.confidence || 95,
+      // Force reload or query invalidation would be ideal here
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Activation Failed",
+        description: error.message,
+        variant: "destructive"
       });
     }
-
-    updateSettingsMutation.mutate(updatedSettings);
-    setNewRule({ type: "sender", category: "FYI", confidence: 95 });
-  };
-
-  const removeRule = (type: "sender" | "subject", index: number) => {
-    if (!settings) return;
-
-    const updatedSettings = { ...settings };
-    if (type === "sender") {
-      updatedSettings.emailRules.senderRules.splice(index, 1);
-    } else {
-      updatedSettings.emailRules.subjectRules.splice(index, 1);
-    }
-
-    updateSettingsMutation.mutate(updatedSettings);
-  };
-
-  const updateGeneralPreference = (key: string, value: boolean) => {
-    if (!settings) return;
-
-    const updatedSettings = {
-      ...settings,
-      emailRules: {
-        ...settings.emailRules,
-        generalPreferences: {
-          ...settings.emailRules.generalPreferences,
-          [key]: value,
-        },
-      },
-    };
-
-    updateSettingsMutation.mutate(updatedSettings);
-  };
-
-  if (isLoading || settingsLoading) {
-    return <div className="p-6">Loading settings...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <div className="p-6">Please log in to access settings.</div>;
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "FYI": return "blue";
-      case "Draft": return "amber";
-      case "Forward": return "emerald";
-      default: return "gray";
-    }
-  };
+  });
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => window.location.href = "/"}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-        <div className="h-6 w-px bg-border" />
-        <SettingsIcon className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Email Categorization Settings</h1>
+    <div className="w-full max-w-[1200px] mx-auto p-6 md:p-8 flex flex-col gap-8 pb-20 font-body">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-white text-4xl font-black leading-tight tracking-[-0.02em] font-display">Memory & Preferences</h2>
+        <p className="text-[#92adc9] text-base font-normal">Configure Donna's behavior, knowledge retention, and tool access.</p>
       </div>
 
-      {/* General Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle>General Preferences</CardTitle>
-          <CardDescription>
-            Configure how Donna AI should categorize your emails
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Prioritize Personal Emails</Label>
-              <p className="text-sm text-muted-foreground">
-                Mark emails from contacts as Draft for immediate attention
-              </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Navigation/Summary */}
+        <div className="flex flex-col gap-6 lg:col-span-1">
+          {/* Plan / Subscription Card */}
+          <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-[#192633] to-[#137fec]/10 p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <span className="material-symbols-outlined text-8xl text-primary">diamond</span>
             </div>
-            <Switch
-              checked={settings?.emailRules.generalPreferences.prioritizePersonal || false}
-              onCheckedChange={(checked) => updateGeneralPreference("prioritizePersonal", checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Auto-Forward Customer Service</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically categorize customer inquiries as Forward
-              </p>
-            </div>
-            <Switch
-              checked={settings?.emailRules.generalPreferences.autoForwardCustomerService || false}
-              onCheckedChange={(checked) => updateGeneralPreference("autoForwardCustomerService", checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Treat Newsletters as FYI</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically categorize newsletters and promotions as FYI
-              </p>
-            </div>
-            <Switch
-              checked={settings?.emailRules.generalPreferences.treatNewslettersAsFYI || false}
-              onCheckedChange={(checked) => updateGeneralPreference("treatNewslettersAsFYI", checked)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Email Rules */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom Email Rules</CardTitle>
-          <CardDescription>
-            Create specific rules for email addresses and subject patterns
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Add New Rule */}
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="font-semibold">Add New Rule</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Select
-                value={newRule.type}
-                onValueChange={(value: "sender" | "subject") =>
-                  setNewRule({ ...newRule, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sender">Sender Email</SelectItem>
-                  <SelectItem value="subject">Subject Pattern</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Input
-                placeholder={newRule.type === "sender" ? "email@example.com" : "Subject contains..."}
-                value={newRule.type === "sender" ? newRule.email || "" : newRule.pattern || ""}
-                onChange={(e) =>
-                  setNewRule({
-                    ...newRule,
-                    [newRule.type === "sender" ? "email" : "pattern"]: e.target.value,
-                  })
-                }
-              />
-
-              <Select
-                value={newRule.category}
-                onValueChange={(value: "FYI" | "Draft" | "Forward") =>
-                  setNewRule({ ...newRule, category: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FYI">FYI</SelectItem>
-                  <SelectItem value="Draft">Draft</SelectItem>
-                  <SelectItem value="Forward">Forward</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Input
-                type="number"
-                min="50"
-                max="100"
-                placeholder="95"
-                value={newRule.confidence}
-                onChange={(e) =>
-                  setNewRule({ ...newRule, confidence: parseInt(e.target.value) })
-                }
-              />
-
-              <Button onClick={addRule} disabled={updateSettingsMutation.isPending}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Rule
-              </Button>
-            </div>
-          </div>
-
-          {/* Existing Rules */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Current Rules</h3>
-            
-            {/* Sender Rules */}
-            {settings?.emailRules.senderRules.map((rule, index) => (
-              <div key={`sender-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Sender</Badge>
-                  <span className="font-mono text-sm">{rule.email}</span>
-                  <Badge className={getCategoryColor(rule.category)}>{rule.category}</Badge>
-                  <span className="text-sm text-muted-foreground">{rule.confidence}% confidence</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRule("sender", index)}
-                  disabled={updateSettingsMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+            <h3 className="text-white text-lg font-bold mb-4 font-display flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">verified</span>
+              Subscription
+            </h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[#92adc9] text-sm">Current Plan</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${user?.planType === 'free' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
+                    'bg-primary/20 text-blue-300 border-primary/30'
+                  }`}>
+                  {user?.planType || 'Free'}
+                </span>
               </div>
-            ))}
-
-            {/* Subject Rules */}
-            {settings?.emailRules.subjectRules.map((rule, index) => (
-              <div key={`subject-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Subject</Badge>
-                  <span className="font-mono text-sm">"{rule.pattern}"</span>
-                  <Badge className={getCategoryColor(rule.category)}>{rule.category}</Badge>
-                  <span className="text-sm text-muted-foreground">{rule.confidence}% confidence</span>
+              {user?.trialEndsAt && user?.planType === 'trial' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#92adc9] text-xs">Trial Ends</span>
+                  <span className="text-white text-sm font-mono">{new Date(user.trialEndsAt).toLocaleDateString()}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRule("subject", index)}
-                  disabled={updateSettingsMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              )}
 
-            {(!settings?.emailRules.senderRules.length && !settings?.emailRules.subjectRules.length) && (
-              <p className="text-muted-foreground text-center py-8">
-                No custom rules configured. Add rules above to customize email categorization.
-              </p>
-            )}
+              {user?.planType === 'free' ? (
+                <button
+                  onClick={() => startTrialMutation.mutate()}
+                  disabled={startTrialMutation.isPending}
+                  className="w-full mt-2 py-2.5 rounded-lg bg-primary hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                >
+                  {startTrialMutation.isPending ? 'Activating...' : 'Start 7-Day Pro Trial'}
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              ) : (
+                <button className="w-full mt-2 py-2 rounded-lg border border-border-dark text-[#92adc9] hover:text-white hover:bg-[#233648] transition-colors text-xs font-bold">
+                  Manage Subscription
+                </button>
+              )}
+            </div>
           </div>
-        </CardContent>
-        <div className="px-6 pb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button className="w-full">
-              Save Settings
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => {
-                fetch('/api/emails/refresh', { method: 'POST' })
-                  .then(() => window.location.reload())
-                  .catch(err => console.error('Refresh failed:', err));
-              }}
-            >
-              Refresh Emails
-            </Button>
+
+          <div className="rounded-xl border border-border-dark bg-card-dark p-6">
+            <h3 className="text-white text-lg font-bold mb-4 font-display">System Status</h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[#92adc9] text-sm">Memory Usage</span>
+                <span className="text-white text-sm font-mono">2.4 GB / 5 TB</span>
+              </div>
+              <div className="w-full bg-[#111a22] rounded-full h-1.5">
+                <div className="bg-primary h-1.5 rounded-full" style={{ width: "2%" }}></div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border-dark">
+                <span className="text-[#92adc9] text-sm">Uptime</span>
+                <span className="text-white text-sm font-mono">99.9%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#92adc9] text-sm">Learning Rate</span>
+                <span className="text-emerald-400 text-sm font-bold">High</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border-dark bg-card-dark p-6">
+            <h3 className="text-white text-lg font-bold mb-4 font-display">Integrations</h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center p-1.5">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg" alt="Gmail" />
+                  </div>
+                  <span className="text-white text-sm font-medium">Gmail</span>
+                </div>
+                <span className="text-emerald-400 text-xs font-bold uppercase">Active</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center p-1.5">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Calendar" />
+                  </div>
+                  <span className="text-white text-sm font-medium">Calendar</span>
+                </div>
+                <span className="text-emerald-400 text-xs font-bold uppercase">Active</span>
+              </div>
+            </div>
+            <button className="w-full mt-4 py-2 rounded-lg border border-border-dark text-[#92adc9] hover:text-white hover:bg-[#233648] transition-colors text-xs font-bold">
+              + Add New Integration
+            </button>
           </div>
         </div>
-      </Card>
+
+        {/* Right Column: Settings Forms */}
+        <div className="flex flex-col gap-8 lg:col-span-2">
+
+          {/* Core Behavior Section */}
+          <section className="flex flex-col gap-4">
+            <h3 className="text-white text-xl font-bold font-display flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">psychology</span>
+              Core Behavior
+            </h3>
+            <div className="rounded-xl border border-border-dark bg-card-dark p-6">
+              <div className="flex flex-col gap-4">
+                <label className="text-white text-sm font-bold">System Prompt / Persona</label>
+                <p className="text-[#92adc9] text-xs">Define how Donna should act. This overrides default behaviors.</p>
+                <textarea
+                  className="w-full h-32 bg-[#111a22] border border-border-dark rounded-lg p-3 text-sm text-white focus:outline-none focus:border-primary transition-colors resize-none font-mono"
+                  placeholder="You are Donna, a proactive Chief of Staff..."
+                  defaultValue="You are Donna, a proactive Chief of Staff for a high-end custom flooring business. You prioritize aesthetic quality and customer satisfaction. You are authorized to make decisions on small inventory restocks but must ask for approval on pricing changes."
+                ></textarea>
+                <div className="flex justify-end">
+                  <button className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs transition-colors">
+                    Save Behavior
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Autonomy Level */}
+          <section className="flex flex-col gap-4">
+            <h3 className="text-white text-xl font-bold font-display flex items-center gap-2">
+              <span className="material-symbols-outlined text-accent-amber">tune</span>
+              Autonomy Level
+            </h3>
+            <div className="rounded-xl border border-border-dark bg-card-dark p-6">
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-white text-sm font-bold">Current Mode</span>
+                  <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold uppercase">
+                    {autonomyLevel === 0 ? "Manual Approval" : autonomyLevel === 1 ? "Assisted Mode" : "High Autonomy"}
+                  </span>
+                </div>
+
+                <div className="px-2">
+                  <Slider
+                    defaultValue={[2]}
+                    max={2}
+                    step={1}
+                    onValueChange={(vals) => setAutonomyLevel(vals[0])}
+                    className="py-4"
+                  />
+                  <div className="flex justify-between text-[#55708c] text-xs font-medium mt-2">
+                    <span>Human-in-the-loop</span>
+                    <span>Assisted</span>
+                    <span>Autonomous</span>
+                  </div>
+                </div>
+
+                <div className="bg-[#111a22] rounded-lg p-4 border border-border-dark">
+                  <h4 className="text-white text-sm font-bold mb-2">
+                    {autonomyLevel === 0 ? "Strict Control" : autonomyLevel === 1 ? "Balanced Collaboration" : "Proactive Execution"}
+                  </h4>
+                  <p className="text-[#92adc9] text-xs leading-relaxed">
+                    {autonomyLevel === 0
+                      ? "Donna will draft emails and queue tasks but will NEVEER execute an action without your explicit click. Safe, but slower."
+                      : autonomyLevel === 1
+                        ? "Donna handles routine scheduling and low-risk replies automatically. Strategic decisions and specialized emails require approval."
+                        : "Donna independently manages inventory, customer drafts, and initial design generation. Only specifically gated actions (Pricing, Refunds > $500) trigger alerts."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Memory Retention */}
+          <section className="flex flex-col gap-4">
+            <h3 className="text-white text-xl font-bold font-display flex items-center gap-2">
+              <span className="material-symbols-outlined text-accent-purple">memory</span>
+              Memory Management
+            </h3>
+            <div className="rounded-xl border border-border-dark bg-card-dark p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-white text-sm font-bold">Operational Memory</span>
+                    <span className="text-[#92adc9] text-xs">Remember task context and project details</span>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between border-t border-border-dark pt-4">
+                  <div className="flex flex-col">
+                    <span className="text-white text-sm font-bold">Long-term Retention</span>
+                    <span className="text-[#92adc9] text-xs">Store interactions forever to learn preferences</span>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between border-t border-border-dark pt-4">
+                  <div className="flex flex-col">
+                    <span className="text-white text-sm font-bold">Vector Database Indexing</span>
+                    <span className="text-[#92adc9] text-xs">Allow semantic search across all files (RAG)</span>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+
+                <div className="flex justify-end mt-2">
+                  <button className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                    Reset Memory Layer...
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail, Bot, Sparkles, Zap, Plus } from "lucide-react";
+import { ArrowLeft, Reply, Send, Tag, User, Calendar, Clock, Mail, Bot, Sparkles, Zap, Plus, Wand2, ShieldCheck, Share2 } from "lucide-react";
 import { formatDistanceToNow, isValid } from "date-fns";
 
 interface Email {
@@ -17,6 +17,7 @@ interface Email {
   sender: string;
   senderEmail: string;
   body: string;
+  content?: string;
   date: string;
   category: string;
 }
@@ -35,7 +36,7 @@ export default function EmailDetail() {
 
   // Fetch email details
   const { data: email, isLoading } = useQuery<Email>({
-    queryKey: ["/api/emails", emailId],
+    queryKey: [`/api/emails/${emailId}`],
     enabled: !!emailId,
   });
 
@@ -43,7 +44,7 @@ export default function EmailDetail() {
   const replyMutation = useMutation({
     mutationFn: async () => {
       if (!email || !replyText.trim()) return;
-      
+
       const response = await apiRequest("POST", `/api/emails/${emailId}/reply`, {
         to: email.senderEmail,
         subject: `Re: ${email.subject}`,
@@ -99,7 +100,7 @@ export default function EmailDetail() {
   const createRuleMutation = useMutation({
     mutationFn: async (ruleType: "sender" | "subject") => {
       if (!email || !newCategory) return;
-      
+
       const response = await apiRequest("POST", "/api/settings/rules", {
         type: ruleType,
         value: ruleType === "sender" ? email.senderEmail : email.subject,
@@ -162,6 +163,7 @@ export default function EmailDetail() {
         title: "Task created",
         description: `Task "${data.title}" has been created successfully.`,
       });
+      setLocation("/tasks");
     },
     onError: () => {
       toast({
@@ -174,338 +176,241 @@ export default function EmailDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Button variant="ghost" onClick={() => setLocation("/")}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-slate-900">Email Details</h1>
-                  <p className="text-xs text-slate-500">Loading...</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-[#101522] flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-slate-400 font-medium italic">Scanning email content...</p>
+        </div>
       </div>
     );
   }
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Button variant="ghost" onClick={() => setLocation("/")}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-slate-900">Email Details</h1>
-                  <p className="text-xs text-slate-500">Email not found</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card>
-            <CardContent className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Email not found</h3>
-                <p className="text-gray-500">The email you're looking for doesn't exist or has been removed.</p>
-                <Button className="mt-4" onClick={() => setLocation("/")}>
-                  Return to Dashboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-[#101522] text-white">
+        <Header emailStatus="connected" />
+        <main className="max-w-3xl mx-auto px-6 py-24 text-center">
+          <Mail className="size-16 text-slate-800 mx-auto mb-8" />
+          <h2 className="text-3xl font-bold mb-4">Email trace not found</h2>
+          <p className="text-slate-500 mb-12 italic">The requested communication may have been archived or deleted from our active database.</p>
+          <Button onClick={() => setLocation("/")} className="bg-primary hover:bg-primary/90 shadow-glow px-8">Return to Terminal</Button>
         </main>
       </div>
     );
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "FYI": return "bg-blue-100 text-blue-800";
-      case "Draft": return "bg-amber-100 text-amber-800";
-      case "Forward": return "bg-emerald-100 text-emerald-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" onClick={() => setLocation("/")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Mail className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-slate-900">Email Details</h1>
-                <p className="text-xs text-slate-500">View and manage email</p>
-              </div>
+    <div className="min-h-screen bg-[#101522] text-white flex flex-col">
+      <Header emailStatus="connected" />
+
+      <main className="max-w-5xl mx-auto px-6 py-12 w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+        {/* Navigation & Context Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-white/5">
+          <button
+            onClick={() => setLocation("/")}
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-xs font-bold uppercase tracking-widest italic">Return to Inbox</span>
+          </button>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+              <ShieldCheck className="size-3.5 text-emerald-400" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Verified • Category: {email.category}</span>
             </div>
-            {email && (
-              <Badge className={getCategoryColor(email.category)}>
-                {email.category}
-              </Badge>
-            )}
+            <button className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+              <Share2 className="size-4" />
+            </button>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
-      {/* Email Content */}
-      <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <CardTitle className="text-xl">{email.subject}</CardTitle>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  {email.sender} ({email.senderEmail})
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Subject Card */}
+            <div className="p-10 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl relative overflow-hidden ring-1 ring-white/5">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-3xl -mr-32 -mt-32 rounded-full"></div>
+
+              <div className="relative z-10">
+                <h1 className="text-3xl font-bold tracking-tight mb-8 leading-tight">{email.subject}</h1>
+
+                <div className="flex items-center gap-4 mb-10 pb-8 border-b border-white/5">
+                  <div className="size-12 rounded-2xl bg-gradient-to-tr from-slate-700 to-slate-800 flex items-center justify-center text-lg font-bold">
+                    {(email.sender || "?")[0]}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold">{email.sender}</p>
+                    <p className="text-slate-500 text-xs italic tracking-tight">{email.senderEmail}</p>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{email.date && isValid(new Date(email.date))
+                      ? formatDistanceToNow(new Date(email.date), { addSuffix: true })
+                      : "Recently"}</p>
+                    <p className="text-[10px] text-slate-700 italic">via Donna Protocol</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {email.date && isValid(new Date(email.date)) ? formatDistanceToNow(new Date(email.date), { addSuffix: true }) : 'No date'}
-                </div>
+
+                <div
+                  className="text-slate-300 text-[15px] leading-relaxed whitespace-pre-wrap select-text italic selection:bg-primary/30"
+                  dangerouslySetInnerHTML={{
+                    __html: (email.body || email.content || "").replace(/\n/g, '<br>')
+                  }}
+                />
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => createTaskMutation.mutate()}
-                disabled={createTaskMutation.isPending}
-                className="flex-shrink-0"
-              >
-                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">{createTaskMutation.isPending ? "Creating..." : "Create Task"}</span>
-                <span className="sm:hidden">{createTaskMutation.isPending ? "..." : "Task"}</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => draftMutation.mutate()}
-                disabled={draftMutation.isPending}
-                className="flex-shrink-0"
-              >
-                <Bot className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">{draftMutation.isPending ? "Generating..." : "AI Draft"}</span>
-                <span className="sm:hidden">{draftMutation.isPending ? "..." : "AI"}</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowReply(!showReply)}
-                className="flex-shrink-0"
-              >
-                <Reply className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Reply</span>
-                <span className="sm:hidden">Reply</span>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Email Body Content */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Message Content</h3>
-            <div 
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 rounded-lg text-sm leading-relaxed min-h-[200px]"
-              style={{ whiteSpace: 'pre-wrap' }}
-            >
-              {email.body && email.body.trim() ? (
-                <div 
-                  className="text-gray-800 dark:text-gray-200"
-                  dangerouslySetInnerHTML={{ 
-                    __html: email.body
-                      .replace(/\n/g, '<br>')
-                      .replace(/\r\n/g, '<br>')
-                      .replace(/\r/g, '<br>')
-                  }} 
-                />
-              ) : email.content ? (
-                <div 
-                  className="text-gray-800 dark:text-gray-200"
-                  dangerouslySetInnerHTML={{ 
-                    __html: email.content
-                      .replace(/\n/g, '<br>')
-                      .replace(/\r\n/g, '<br>')
-                      .replace(/\r/g, '<br>')
-                  }} 
-                />
-              ) : (
-                <div className="text-gray-500 dark:text-gray-400 italic text-center py-8">
-                  <Mail className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p>No message content available</p>
-                  <p className="text-xs mt-1">This email may only contain attachments or HTML that couldn't be processed</p>
-                  {/* Debug info */}
-                  <details className="mt-4 text-left">
-                    <summary className="cursor-pointer text-xs">Debug Info</summary>
-                    <pre className="text-xs mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                      Body: {JSON.stringify(email.body, null, 2)}
-                      Content: {JSON.stringify(email.content, null, 2)}
-                    </pre>
-                  </details>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Reply Section */}
-      {showReply && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Reply to {email.sender}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Show AI draft suggestion if available */}
-            {showDraftSuggestion && draftSuggestion && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">
-                    AI Draft Suggestion ({draftSuggestion.confidence}% confidence, {draftSuggestion.tone} tone)
-                  </span>
+            {/* Reply Area */}
+            {showReply && (
+              <div className="p-8 rounded-3xl bg-black/40 border border-primary/20 shadow-glow-sm relative animate-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Reply className="size-5 text-primary" />
+                    <h3 className="font-bold text-lg uppercase tracking-wider">Compose Response</h3>
+                  </div>
+                  <Badge className="bg-primary/10 text-primary border-primary/20">AI Enhanced</Badge>
                 </div>
-                <p className="text-sm text-blue-700 italic">
-                  {draftSuggestion.reasoning}
-                </p>
-                <div className="flex gap-2">
+
+                {showDraftSuggestion && draftSuggestion && (
+                  <div className="mb-6 p-5 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-4">
+                    <Wand2 className="size-6 text-primary mt-1" />
+                    <div>
+                      <p className="text-sm font-bold text-white mb-1 italic">Donna's Context Awareness</p>
+                      <p className="text-xs text-slate-400 leading-relaxed mb-4 italic">"{draftSuggestion.reasoning}"</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-white/5">
+                          Tone: {draftSuggestion.tone}
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-white/5">
+                          Confidence: {draftSuggestion.confidence}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Draft your executive response..."
+                  className="w-full h-48 bg-white/5 border border-white/10 rounded-2xl p-5 text-slate-300 focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-slate-600 mb-6 italic"
+                />
+
+                <div className="flex justify-end gap-3">
+                  <Button variant="ghost" onClick={() => setShowReply(false)} className="text-slate-500 hover:text-white">Discard</Button>
                   <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setReplyText(draftSuggestion.body);
-                      setShowDraftSuggestion(false);
-                    }}
+                    onClick={() => replyMutation.mutate()}
+                    disabled={!replyText?.trim() || replyMutation.isPending}
+                    className="bg-primary hover:bg-primary/90 shadow-glow px-8 rounded-xl font-bold italic"
                   >
-                    <Zap className="h-4 w-4 mr-2" />
-                    Use Draft
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowDraftSuggestion(false)}
-                  >
-                    Dismiss
+                    {replyMutation.isPending ? "Transmitting..." : "Send via Donna AI"}
+                    <Send className="size-4 ml-2" />
                   </Button>
                 </div>
               </div>
             )}
-            
-            <Textarea
-              placeholder="Type your reply..."
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              rows={6}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowReply(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => replyMutation.mutate()}
-                disabled={!replyText.trim() || replyMutation.isPending}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Send Reply
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Categorization Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5" />
-            Email Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Select value={newCategory} onValueChange={setNewCategory}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Change category..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="FYI">FYI</SelectItem>
-                <SelectItem value="Draft">Draft</SelectItem>
-                <SelectItem value="Forward">Forward</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button
-              onClick={() => recategorizeMutation.mutate(newCategory)}
-              disabled={!newCategory || newCategory === email.category || recategorizeMutation.isPending}
-            >
-              Recategorize
-            </Button>
           </div>
 
-          {newCategory && newCategory !== email.category && (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Create automatic rules for future emails:
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => createRuleMutation.mutate("sender")}
-                  disabled={createRuleMutation.isPending}
+          {/* AI Sidebar Column */}
+          <div className="space-y-6">
+            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
+                <Bot className="size-4" />
+                AI Actions
+              </h3>
+
+              <div className="grid grid-cols-1 gap-4">
+                <button
+                  onClick={() => createTaskMutation.mutate()}
+                  disabled={createTaskMutation.isPending}
+                  className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/50 transition-all group"
                 >
-                  Always categorize emails from {email.sender} as {newCategory}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => createRuleMutation.mutate("subject")}
-                  disabled={createRuleMutation.isPending}
+                  <Plus className="size-6 text-slate-400 group-hover:text-primary mb-3 transition-colors" />
+                  <span className="text-xs font-bold uppercase tracking-widest">{createTaskMutation.isPending ? "Assigning..." : "Create Task"}</span>
+                </button>
+
+                <button
+                  onClick={() => draftMutation.mutate()}
+                  disabled={draftMutation.isPending}
+                  className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-500/50 transition-all group"
                 >
-                  Always categorize emails with this subject as {newCategory}
-                </Button>
+                  <Wand2 className="size-6 text-slate-400 group-hover:text-amber-500 mb-3 transition-colors" />
+                  <span className="text-xs font-bold uppercase tracking-widest">{draftMutation.isPending ? "Thinking..." : "Generate Draft"}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowReply(!showReply)}
+                  className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-emerald-500/50 transition-all group"
+                >
+                  <Reply className="size-6 text-slate-400 group-hover:text-emerald-500 mb-3 transition-colors" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Manual Reply</span>
+                </button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Categorization Card */}
+            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
+                <Tag className="size-4" />
+                Optimization
+              </h3>
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Strategic Category</label>
+                  <Select value={newCategory} onValueChange={setNewCategory}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl focus:ring-0">
+                      <SelectValue placeholder={email.category} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
+                      <SelectItem value="FYI">FYI</SelectItem>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Forward">Forward</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {newCategory && newCategory !== email.category && (
+                    <Button
+                      onClick={() => recategorizeMutation.mutate(newCategory)}
+                      className="w-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all rounded-xl mt-2"
+                    >
+                      Execute Change
+                    </Button>
+                  )}
+                </div>
+
+                {newCategory && newCategory !== email.category && (
+                  <div className="pt-6 border-t border-white/10 space-y-4">
+                    <p className="text-[10px] font-bold text-slate-600 uppercase italic">Enable Automation Protocol</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => createRuleMutation.mutate("sender")}
+                        disabled={createRuleMutation.isPending}
+                        className="bg-white/5 text-[10px] justify-start px-4 h-11 border border-white/5 hover:border-primary/30 text-slate-400 hover:text-white font-bold tracking-tight rounded-xl italic"
+                      >
+                        Always {newCategory} from sender
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => createRuleMutation.mutate("subject")}
+                        disabled={createRuleMutation.isPending}
+                        className="bg-white/5 text-[10px] justify-start px-4 h-11 border border-white/5 hover:border-primary/30 text-slate-400 hover:text-white font-bold tracking-tight rounded-xl italic"
+                      >
+                        Always {newCategory} by subject
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
       </main>
     </div>
   );

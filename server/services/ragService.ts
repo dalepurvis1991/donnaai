@@ -14,11 +14,10 @@ export interface RAGContext {
 export class RAGService {
   async buildContext(userId: string): Promise<RAGContext> {
     try {
-      // Get user's recent emails for context (filter by user if needed)
-      const allEmails = await storage.getEmails();
+      const allEmails = await storage.getEmails(userId);
       const recentEmails = allEmails; // For now, all emails are user-specific in our system
       const userSettings = await storage.getUserSettings(userId);
-      
+
       // Analyze email patterns
       const senderCounts = new Map<string, number>();
       const subjectPatterns = new Map<string, number>();
@@ -31,13 +30,13 @@ export class RAGService {
       recentEmails.forEach(email => {
         // Count senders
         senderCounts.set(email.senderEmail, (senderCounts.get(email.senderEmail) || 0) + 1);
-        
+
         // Extract subject patterns
         const subjectWords = email.subject.toLowerCase().split(' ').filter(word => word.length > 3);
         subjectWords.forEach(word => {
           subjectPatterns.set(word, (subjectPatterns.get(word) || 0) + 1);
         });
-        
+
         // Count categories
         if (categoryDistribution[email.category]) {
           categoryDistribution[email.category]++;
@@ -82,11 +81,11 @@ export class RAGService {
       }
 
       const context = await this.buildContext(userId);
-      
+
       // Use vector service to find relevant memories
       const { vectorService } = await import("./vectorService");
       const relevantMemories = await vectorService.searchMemories(message, userId, 10);
-      
+
       // Enhanced system prompt with folder capabilities
       const systemPrompt = `You are Donna AI, an intelligent email management assistant with deep business context awareness and folder management capabilities.
 
@@ -114,9 +113,9 @@ To create folders, say things like:
 - "Organize emails by subject containing [keyword]"
 
 Recent Email Insights:
-${context.recentEmails.slice(0, 5).map(email => 
-  `- ${email.subject} from ${email.sender} (${email.category}) - ${this.getEmailInsight(email)}`
-).join('\n')}
+${context.recentEmails.slice(0, 5).map(email =>
+        `- ${email.subject} from ${email.sender} (${email.category}) - ${this.getEmailInsight(email)}`
+      ).join('\n')}
 
 Be helpful, contextually aware, and provide actionable insights. Reference specific emails or patterns when relevant.`;
 
@@ -132,13 +131,13 @@ Be helpful, contextually aware, and provide actionable insights. Reference speci
 
   private async detectFolderAction(message: string): Promise<any | null> {
     const lowerMessage = message.toLowerCase();
-    
+
     // Detect folder creation requests
     if (lowerMessage.includes("create") && (lowerMessage.includes("folder") || lowerMessage.includes("put all emails"))) {
       // Extract sender email or domain
       const senderMatch = message.match(/from\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
       const domainMatch = message.match(/from\s+([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
-      
+
       if (senderMatch || domainMatch) {
         return {
           action: "create_folder_with_rule",
@@ -148,20 +147,20 @@ Be helpful, contextually aware, and provide actionable insights. Reference speci
         };
       }
     }
-    
+
     return null;
   }
 
   private async handleFolderAction(userId: string, action: any, originalMessage: string): Promise<string> {
     try {
       const { storage } = await import("../storage");
-      
+
       if (action.action === "create_folder_with_rule") {
         // Create a meaningful folder name
         let folderName = "Unnamed Folder";
         let ruleType = "sender";
         let ruleValue = "";
-        
+
         if (action.senderEmail) {
           const domain = action.senderEmail.split("@")[1];
           folderName = `${domain} Emails`;
@@ -172,22 +171,22 @@ Be helpful, contextually aware, and provide actionable insights. Reference speci
           ruleType = "domain";
           ruleValue = action.domain;
         }
-        
+
         // Create the folder
         const folder = await storage.createFolder(userId, folderName, "#10b981", `Auto-created folder for emails from ${ruleValue}`);
-        
+
         // Create the rule
         await storage.createFolderRule(userId, folder.id, ruleType, ruleValue);
-        
+
         // Apply rules to existing emails
-        const emails = await storage.getEmails();
+        const emails = await storage.getEmails(userId);
         for (const email of emails) {
           await storage.applyFolderRules(email.id, userId);
         }
-        
+
         // Count affected emails
         const folderEmails = await storage.getEmailsByFolder(folder.id);
-        
+
         return `✅ Created folder "${folderName}" and automatically moved ${folderEmails.length} existing emails into it. All future emails from ${ruleValue} will be automatically organized into this folder.
 
 The folder has been set up with:
@@ -198,7 +197,7 @@ The folder has been set up with:
 
 You can view your folders and manage rules in the folders section.`;
       }
-      
+
       return "I couldn't complete that folder action. Please try rephrasing your request.";
     } catch (error) {
       console.error("Error handling folder action:", error);
@@ -208,19 +207,19 @@ You can view your folders and manage rules in the folders section.`;
 
   private inferCommunicationStyle(emails: any[]): string {
     if (emails.length === 0) return "professional";
-    
+
     // Analyze email content for tone indicators
     const businessKeywords = ["meeting", "project", "deadline", "client", "customer", "proposal"];
     const casualKeywords = ["thanks", "cheers", "hope", "please", "kind regards"];
     const formalKeywords = ["sincerely", "respectfully", "dear", "pursuant", "aforementioned"];
-    
+
     let businessScore = 0;
     let casualScore = 0;
     let formalScore = 0;
-    
+
     for (const email of emails.slice(0, 10)) {
       const content = (email.subject + " " + (email.body || "")).toLowerCase();
-      
+
       businessKeywords.forEach(word => {
         if (content.includes(word)) businessScore++;
       });
@@ -231,7 +230,7 @@ You can view your folders and manage rules in the folders section.`;
         if (content.includes(word)) formalScore++;
       });
     }
-    
+
     if (formalScore > businessScore && formalScore > casualScore) return "formal";
     if (casualScore > businessScore && casualScore > formalScore) return "casual";
     return "professional";
@@ -249,6 +248,33 @@ You can view your folders and manage rules in the folders section.`;
       return "Urgent matter to share with team";
     }
     return `${email.category} email requiring attention`;
+  }
+
+  async searchSimilarEmails(userId: string, query: string, limit: number = 5): Promise<any[]> {
+    try {
+      const { vectorService } = await import("./vectorService");
+      const results = await vectorService.searchMemories(query, userId, limit);
+      return results.map(r => ({
+        subject: (r.document.metadata as any)?.subject || "Unknown Subject",
+        body: r.document.text
+      }));
+    } catch (error) {
+      console.error("Error searching similar emails:", error);
+      return [];
+    }
+  }
+
+  async processEmailsForLearning(userId: string, emails: any[]): Promise<void> {
+    try {
+      const { vectorService } = await import("./vectorService");
+      for (const email of emails) {
+        // Here we'd ideally index the email content
+        // For now, satisfy the interface
+        await vectorService.indexNote(`email-learning-${email.id}`, email.body, userId);
+      }
+    } catch (error) {
+      console.error("Error processing emails for learning:", error);
+    }
   }
 }
 

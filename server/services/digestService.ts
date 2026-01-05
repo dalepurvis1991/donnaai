@@ -30,18 +30,18 @@ export class DigestService {
   async generateDailyDigest(userId: string, hoursBack: number = 24): Promise<DailyDigestData> {
     try {
       // Get recent emails
-      const allEmails = await storage.getEmails();
+      const allEmails = await storage.getEmails(userId);
       const cutoffDate = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-      const recentEmails = allEmails.filter(email => 
+      const recentEmails = allEmails.filter(email =>
         new Date(email.date) >= cutoffDate
       );
 
       // Extract business metrics
       const metrics = await this.extractBusinessMetrics(recentEmails);
-      
+
       // Generate AI summary
       const summary = await this.generateSummary(metrics, recentEmails, hoursBack);
-      
+
       // Generate insights and recommendations
       const insights = this.generateInsights(metrics, recentEmails);
       const recommendations = this.generateRecommendations(metrics, recentEmails);
@@ -63,7 +63,7 @@ export class DigestService {
   private async extractBusinessMetrics(emails: any[]): Promise<BusinessMetrics> {
     const salesOrders = await this.extractSalesMetrics(emails);
     const emailCounts = this.extractEmailMetrics(emails);
-    
+
     return {
       salesOrders,
       emailCounts,
@@ -73,7 +73,7 @@ export class DigestService {
 
   private async extractSalesMetrics(emails: any[]): Promise<BusinessMetrics['salesOrders']> {
     // Filter sales/order emails
-    const salesEmails = emails.filter(email => 
+    const salesEmails = emails.filter(email =>
       this.isSalesEmail(email.subject, email.body, email.senderEmail)
     );
 
@@ -89,7 +89,7 @@ export class DigestService {
         if (orderData) {
           count++;
           totalValue += orderData.value;
-          
+
           // Count products
           orderData.products.forEach(product => {
             products[product.name] = (products[product.name] || 0) + product.quantity;
@@ -117,28 +117,28 @@ export class DigestService {
 
   private isSalesEmail(subject: string, body: string, senderEmail: string): boolean {
     const salesKeywords = [
-      "order", "purchase", "sale", "payment", "invoice", "receipt", 
+      "order", "purchase", "sale", "payment", "invoice", "receipt",
       "order confirmation", "payment received", "new order", "order #"
     ];
-    
+
     const salesDomains = [
-      "shopify", "woocommerce", "stripe", "paypal", 
+      "shopify", "woocommerce", "stripe", "paypal",
       "square", "order", "shop", "store"
     ];
 
     const content = (subject + " " + (body || "")).toLowerCase();
-    
+
     // Check for sales keywords
     const hasKeywords = salesKeywords.some(keyword => content.includes(keyword));
-    
+
     // Check for sales-related sender domains
-    const hasSalesDomain = salesDomains.some(domain => 
+    const hasSalesDomain = salesDomains.some(domain =>
       senderEmail.toLowerCase().includes(domain)
     );
-    
+
     // Check for order patterns
     const hasOrderPattern = /order\s*#?\s*\d+|invoice\s*#?\s*\d+|£\d+\.\d{2}|\$\d+\.\d{2}/i.test(content);
-    
+
     return hasKeywords || hasSalesDomain || hasOrderPattern;
   }
 
@@ -174,7 +174,7 @@ If no clear order data is found, return null.`;
       } catch (parseError) {
         console.error("Failed to parse AI response:", parseError);
       }
-      
+
       return null;
     } catch (error) {
       console.error("Error in AI order parsing:", error);
@@ -184,21 +184,21 @@ If no clear order data is found, return null.`;
 
   private fallbackOrderParsing(email: any): { value: number } | null {
     const content = email.subject + " " + (email.body || "");
-    
+
     // Try to extract monetary values
     const priceMatches = content.match(/£(\d+(?:,\d{3})*(?:\.\d{2})?)/g);
     if (priceMatches && priceMatches.length > 0) {
       // Take the largest value found (likely the total)
-      const values = priceMatches.map(match => 
+      const values = priceMatches.map(match =>
         parseFloat(match.replace('£', '').replace(',', ''))
       );
       const maxValue = Math.max(...values);
-      
+
       if (maxValue > 0 && maxValue < 10000) { // Reasonable order range
         return { value: maxValue };
       }
     }
-    
+
     return null;
   }
 
@@ -209,7 +209,7 @@ If no clear order data is found, return null.`;
     emails.forEach(email => {
       // Count by category
       byCategory[email.category] = (byCategory[email.category] || 0) + 1;
-      
+
       // Count by sender
       senderCounts[email.senderEmail] = (senderCounts[email.senderEmail] || 0) + 1;
     });
@@ -257,52 +257,52 @@ Write a friendly, business-focused summary in 2-3 sentences. Highlight key achie
 
   private generateFallbackSummary(metrics: BusinessMetrics, hoursBack: number): string {
     const { salesOrders, emailCounts } = metrics;
-    
+
     if (salesOrders.count > 0) {
       const topProduct = Object.entries(salesOrders.products)
         .sort((a, b) => b[1] - a[1])[0];
-      
+
       return `In the last ${hoursBack} hours: ${salesOrders.count} orders totaling ${salesOrders.currency}${salesOrders.totalValue.toFixed(2)}${topProduct ? `, with ${topProduct[1]} ${topProduct[0]} being the top seller` : ""}. Processed ${emailCounts.total} emails across all categories.`;
     }
-    
+
     return `In the last ${hoursBack} hours: Processed ${emailCounts.total} emails. ${emailCounts.byCategory.Draft || 0} emails need your attention.`;
   }
 
   private generateInsights(metrics: BusinessMetrics, emails: any[]): string[] {
     const insights: string[] = [];
-    
+
     // Sales insights
     if (metrics.salesOrders.count > 0) {
       if (metrics.salesOrders.averageOrderValue > 100) {
         insights.push(`Strong average order value of ${metrics.salesOrders.currency}${metrics.salesOrders.averageOrderValue.toFixed(2)}`);
       }
-      
+
       const topProduct = Object.entries(metrics.salesOrders.products)
         .sort((a, b) => b[1] - a[1])[0];
       if (topProduct) {
         insights.push(`${topProduct[0]} is your bestselling product with ${topProduct[1]} orders`);
       }
     }
-    
+
     // Email insights
     if (metrics.emailCounts.byCategory.Draft > 5) {
       insights.push(`High volume of action-required emails (${metrics.emailCounts.byCategory.Draft}) may need attention`);
     }
-    
+
     return insights;
   }
 
   private generateRecommendations(metrics: BusinessMetrics, emails: any[]): string[] {
     const recommendations: string[] = [];
-    
+
     if (metrics.salesOrders.count > 10) {
       recommendations.push("Consider setting up automated order processing for high-volume days");
     }
-    
+
     if (metrics.emailCounts.byCategory.Draft > metrics.emailCounts.byCategory.FYI) {
       recommendations.push("Focus on clearing action-required emails to maintain workflow efficiency");
     }
-    
+
     return recommendations;
   }
 
@@ -329,13 +329,140 @@ Write a friendly, business-focused summary in 2-3 sentences. Highlight key achie
     }
   }
 
-  async getUserDigestHistory(userId: string, days: number = 7): Promise<any[]> {
+  async getUserDigestHistory(userId: string, days: number = 7): Promise<DailyDigestData[]> {
     try {
-      return await storage.getUserDailyDigests(userId, days);
+      const dbDigests = await storage.getUserDailyDigests(userId, days);
+      return dbDigests.map(d => this.mapDbDigestToFrontend(d));
     } catch (error) {
       console.error("Error fetching digest history:", error);
       return [];
     }
+  }
+
+  private mapDbDigestToFrontend(dbDigest: any): DailyDigestData {
+    const keyMetrics = dbDigest.keyMetrics as any;
+    const salesTotalStr = dbDigest.salesTotal || "£0.00";
+    const currency = salesTotalStr.charAt(0);
+    const totalValue = parseFloat(salesTotalStr.substring(1).replace(/,/g, '')) || 0;
+
+    return {
+      date: dbDigest.date,
+      period: "24h", // Default or extract from somewhere
+      summary: dbDigest.summary,
+      insights: keyMetrics.insights || [],
+      recommendations: keyMetrics.recommendations || [],
+      metrics: {
+        salesOrders: {
+          count: dbDigest.salesCount,
+          totalValue: totalValue,
+          currency: currency,
+          products: dbDigest.productBreakdown as Record<string, number>,
+          averageOrderValue: keyMetrics.averageOrderValue || 0
+        },
+        emailCounts: {
+          total: dbDigest.totalEmails,
+          byCategory: {}, // This might need to be stored in DB if we want full history detail
+          topSenders: keyMetrics.topSenders || []
+        },
+        customMetrics: {}
+      }
+    };
+  }
+  async generateFyiDigests(userId: string): Promise<void> {
+    try {
+      // 1. Fetch unread FYI emails
+      const emails = await storage.getEmailsByCategory(userId, 'FYI');
+      const unreadFyis = emails.filter(e => !e.isSeenInDonna && !e.isRead);
+
+      if (unreadFyis.length === 0) return;
+
+      // 2. Group by Sender (or Domain for receipts)
+      const groups: Record<string, typeof unreadFyis> = {};
+
+      for (const email of unreadFyis) {
+        // Simple grouping by sender email for now
+        const key = email.senderEmail.toLowerCase();
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(email);
+      }
+
+      // 3. Process each group
+      for (const [groupKey, groupEmails] of Object.entries(groups)) {
+        // Only create digest if we have enough volume or it's a "noisy" sender
+        // For MVP, we'll digest everything to show the feature working
+
+        const isReceipt = groupEmails.some(e => this.isSalesEmail(e.subject, e.body || "", e.senderEmail));
+        const emailIds = groupEmails.map(e => e.id);
+
+        let title = "";
+        let summary = "";
+        let metrics = {};
+
+        if (isReceipt) {
+          // Calculate total
+          const total = await this.calculateGroupTotal(groupEmails);
+          title = `Receipts from ${this.formatSenderName(groupEmails[0].sender)}`;
+          summary = `${groupEmails.length} receipts totaling £${total.toFixed(2)}`;
+          metrics = { totalValue: total, currency: "£", count: groupEmails.length };
+        } else {
+          // Newsletter/Update summary
+          title = `Updates from ${this.formatSenderName(groupEmails[0].sender)}`;
+          summary = await this.summarizeGroup(groupEmails);
+          metrics = { count: groupEmails.length };
+        }
+
+        // Create Digest
+        await storage.createFyiDigest({
+          userId,
+          groupKey,
+          title,
+          summary,
+          count: groupEmails.length,
+          metrics,
+          emailIds,
+          status: 'active',
+          lastEmailAt: new Date() // Use latest email date?
+        });
+
+        // Mark these emails as "seen" in context of Donna (so they don't appear in main list or next digest)
+        await storage.markEmailsAsSeenInDonna(emailIds);
+      }
+
+    } catch (error) {
+      console.error("Error generating FYI digests:", error);
+    }
+  }
+
+  private async calculateGroupTotal(emails: any[]): Promise<number> {
+    let total = 0;
+    for (const email of emails) {
+      const orderData = await this.parseOrderEmail(email);
+      if (orderData) {
+        total += orderData.value;
+      } else {
+        const fallback = this.fallbackOrderParsing(email);
+        if (fallback) total += fallback.value;
+      }
+    }
+    return total;
+  }
+
+  private async summarizeGroup(emails: any[]): Promise<string> {
+    // If only 1-2 emails, just list subjects
+    if (emails.length <= 2) {
+      return emails.map(e => e.subject).join("; ");
+    }
+
+    // Use AI for larger groups
+    const subjects = emails.map(e => e.subject).join("\n");
+    const prompt = `Summarize these ${emails.length} email subjects from the same sender into a single bullet point line:
+    ${subjects}`;
+
+    return await openaiService.generateChatResponse([{ role: 'user', content: prompt }], "Be concise.");
+  }
+
+  private formatSenderName(sender: string): string {
+    return sender.split('<')[0].trim().replace(/"/g, '');
   }
 }
 

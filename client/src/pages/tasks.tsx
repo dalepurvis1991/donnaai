@@ -1,388 +1,258 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  Plus,
-  ArrowLeft,
-  CheckCheck,
-  CircleDashed,
-  Calendar,
-  User,
-  DollarSign,
-  CheckSquare
-} from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-
-interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
-  category?: string;
-  dueDate?: string;
-  completedAt?: string;
-  autoDetected: boolean;
-  confidence?: number;
-  supplier?: string;
-  amount?: number;
-  currency?: string;
-  orderNumber?: string;
-  invoiceNumber?: string;
-  stages?: {
-    stage: string;
-    completed: boolean;
-    completedAt?: string;
-    emailId?: number;
-  }[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Tasks() {
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  // Fetch tasks
-  const { data: tasks = [], isLoading, error } = useQuery<Task[]>({
-    queryKey: ["/api/tasks", selectedStatus === "all" ? undefined : selectedStatus],
-    enabled: true,
+  // Feature Gating
+  const isFree = user?.planType === 'free';
+
+  // Fetch Tasks
+  const { data: tasks, isLoading: tasksLoading } = useQuery<any>({
+    queryKey: ["/api/tasks"],
+    enabled: !isFree,
+    refetchInterval: 10000,
   });
 
-  // Update task status
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: Partial<Task> }) => {
-      return apiRequest(`/api/tasks/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(updates),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-    },
+  // Fetch Activity Log
+  const { data: audits, isLoading: auditsLoading } = useQuery<any>({
+    queryKey: ["/api/audit-logs"],
+    enabled: !isFree,
   });
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "bg-red-500";
-      case "high": return "bg-orange-500";
-      case "medium": return "bg-yellow-500";
-      case "low": return "bg-green-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed": return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case "in_progress": return <CircleDashed className="h-4 w-4 text-blue-500" />;
-      case "pending": return <Clock className="h-4 w-4 text-yellow-500" />;
-      case "cancelled": return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStageProgress = (stages: Task["stages"]) => {
-    if (!stages || stages.length === 0) return 0;
-    const completed = stages.filter(stage => stage.completed).length;
-    return (completed / stages.length) * 100;
-  };
-
-  const markTaskComplete = (task: Task) => {
-    updateTaskMutation.mutate({
-      id: task.id,
-      updates: {
-        status: "completed",
-        completedAt: new Date().toISOString()
-      }
-    });
-  };
-
-  const toggleTaskStatus = (task: Task) => {
-    const newStatus = task.status === "completed" ? "pending" : 
-                     task.status === "pending" ? "in_progress" :
-                     task.status === "in_progress" ? "completed" : "pending";
-    
-    updateTaskMutation.mutate({
-      id: task.id,
-      updates: {
-        status: newStatus,
-        ...(newStatus === "completed" && { completedAt: new Date().toISOString() })
-      }
-    });
-  };
-
-  const statusCounts = tasks.reduce((acc: any, task: Task) => {
-    acc[task.status] = (acc[task.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  if (isLoading) {
+  if (isFree) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Link to="/">
-                  <Button variant="ghost" size="sm">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Button>
-                </Link>
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <CheckSquare className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
-                  <p className="text-xs text-slate-500">Loading...</p>
-                </div>
-              </div>
-            </div>
+      <div className="w-full h-[80vh] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-card-dark border border-border-dark rounded-xl p-8 text-center flex flex-col items-center gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-32 bg-primary/20 blur-[100px] rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+
+          <div className="h-16 w-16 bg-[#111a22] rounded-full flex items-center justify-center shadow-xl border border-border-dark relative z-10">
+            <span className="material-symbols-outlined text-4xl text-primary">lock</span>
           </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+
+          <div className="flex flex-col gap-2 relative z-10">
+            <h2 className="text-white text-2xl font-bold font-display">Delegations are Pro-only</h2>
+            <p className="text-[#92adc9] text-sm leading-relaxed">
+              To assign tasks to Donna and track her progress as an agent, you need a subscription. The Free plan is limited to the Daily Brief.
+            </p>
           </div>
-        </main>
+
+          <a href="/settings" className="relative z-10 w-full px-6 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+            Upgrade to Pro / Trial
+            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          </a>
+        </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Link to="/">
-                  <Button variant="ghost" size="sm">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Button>
-                </Link>
-                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-pink-600 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
-                  <p className="text-xs text-slate-500">Error loading tasks</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Failed to load tasks. Please try again.
-            </AlertDescription>
-          </Alert>
-        </main>
-      </div>
-    );
-  }
+  // Map API data to UI format
+  const delegations = tasks?.map((t: any) => ({
+    id: t.id.toString(),
+    name: t.title,
+    assignee: t.assigneeId
+      ? { name: "Team Member", initials: "TM", color: "bg-indigo-500" } // TODO: Fetch team member details
+      : { name: "Donna (AI)", type: "ai", icon: "smart_toy", color: "bg-purple-500" },
+    status: t.status === 'blocked' ? 'Blocked' : t.status === 'completed' ? 'Completed' : 'In Progress',
+    insight: t.description ? t.description.substring(0, 30) + "..." : "Tracking progress",
+    deadline: t.dueDate ? formatDistanceToNow(new Date(t.dueDate), { addSuffix: true }) : "No deadline",
+    isBlocked: t.status === 'blocked',
+    isOverdue: false // TODO: Calculate overdue
+  })) || [];
+
+  const activityLog = audits?.map((log: any) => ({
+    type: log.action.toLowerCase().includes('block') ? 'block' : 'info',
+    title: log.action,
+    desc: log.details?.summary || log.entityId,
+    time: formatDistanceToNow(new Date(log.createdAt), { addSuffix: true }),
+    icon: log.action.toLowerCase().includes('block') ? 'error' : 'info',
+    color: log.action.toLowerCase().includes('block') ? 'red-500' : 'primary'
+  })) || [];
+
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <CheckSquare className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-slate-900">Tasks & Projects</h1>
-                <p className="text-xs text-slate-500">{tasks.length} total tasks</p>
-              </div>
-            </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
-            </Button>
+    <div className="w-full max-w-[1200px] mx-auto p-6 md:p-8 flex flex-col gap-8 pb-20 font-body">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-white text-4xl font-black leading-tight tracking-[-0.02em] font-display">Delegations by Donna</h2>
+          <p className="text-[#92adc9] text-base font-normal">Project manager view of tasks coordinated by AI</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+            </span>
+            <span className="text-blue-400 text-xs font-bold uppercase tracking-wider">Donna Active</span>
+          </div>
+          <button className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-blue-500/20">
+            <span className="material-symbols-outlined text-[20px]">add_task</span>
+            Delegate New Task
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-card-dark relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-8xl text-primary">assignment</span>
+          </div>
+          <div className="flex items-center gap-2 text-[#92adc9] text-sm font-medium">
+            <span className="material-symbols-outlined text-[18px]">pending_actions</span>
+            Active Delegations
+          </div>
+          <div className="flex items-baseline gap-3">
+            <p className="text-white text-3xl font-bold leading-tight font-display">{delegations.length}</p>
+            <span className="text-[#92adc9] text-xs">Tasks in progress</span>
+          </div>
+          <div className="w-full bg-[#111a22] rounded-full h-1.5 mt-3">
+            <div className="bg-primary h-1.5 rounded-full" style={{ width: "65%" }}></div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Status Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-                onClick={() => setSelectedStatus("all")}>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">{tasks.length}</div>
-              <div className="text-sm text-gray-600">Total Tasks</div>
-            </CardContent>
-          </Card>
-          <Card className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedStatus("pending")}>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending || 0}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </CardContent>
-          </Card>
-          <Card className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedStatus("in_progress")}>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{statusCounts.in_progress || 0}</div>
-              <div className="text-sm text-gray-600">In Progress</div>
-            </CardContent>
-          </Card>
-          <Card className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedStatus("completed")}>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{statusCounts.completed || 0}</div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-2 rounded-xl p-6 border border-red-900/30 bg-card-dark relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-8xl text-red-500">block</span>
+          </div>
+          <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
+            <span className="material-symbols-outlined text-[18px]">block</span>
+            Blocked Items
+          </div>
+          <div className="flex items-baseline gap-3">
+            <p className="text-white text-3xl font-bold leading-tight font-display">{delegations.filter((t: any) => t.isBlocked).length}</p>
+            <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-xs font-bold">Needs Attention</span>
+          </div>
+          <p className="text-[#92adc9] text-xs mt-2">Waiting on assets or approval</p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6">
-          {["all", "pending", "in_progress", "completed"].map((status) => (
-            <Button
-              key={status}
-              variant={selectedStatus === status ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedStatus(status)}
-              className="capitalize"
-            >
-              {status.replace("_", " ")}
-            </Button>
-          ))}
+        <div className="flex flex-col gap-2 rounded-xl p-6 border border-orange-900/30 bg-card-dark relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-8xl text-orange-500">schedule</span>
+          </div>
+          <div className="flex items-center gap-2 text-orange-400 text-sm font-medium">
+            <span className="material-symbols-outlined text-[18px]">history</span>
+            Overdue Tasks
+          </div>
+          <div className="flex items-baseline gap-3">
+            <p className="text-white text-3xl font-bold leading-tight font-display">0</p>
+            <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 text-xs font-bold">Good Standing</span>
+          </div>
+          <p className="text-[#92adc9] text-xs mt-2">Exceeding estimated timeline</p>
         </div>
+      </div>
 
-        {/* Tasks List */}
-        <div className="space-y-4">
-          {tasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
-                <p className="text-gray-600">
-                  {selectedStatus === "all" 
-                    ? "Baron will automatically detect tasks from your emails. You can also create tasks manually."
-                    : `No ${selectedStatus.replace("_", " ")} tasks at the moment.`
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            tasks.map((task: Task) => (
-              <Card key={task.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <button 
-                        onClick={() => toggleTaskStatus(task)}
-                        className="mt-1"
-                      >
-                        {getStatusIcon(task.status)}
-                      </button>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-lg">{task.title}</CardTitle>
-                          <Badge 
-                            className={`text-xs text-white ${getPriorityColor(task.priority)}`}
-                          >
-                            {task.priority}
-                          </Badge>
-                          {task.autoDetected && (
-                            <Badge variant="secondary" className="text-xs">
-                              AI Detected {task.confidence && `(${Math.round(task.confidence * 100)}%)`}
-                            </Badge>
-                          )}
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-gray-600 mb-2">{task.description}</p>
-                        )}
-                        
-                        {/* Business Details */}
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                          {task.supplier && (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {task.supplier}
-                            </div>
-                          )}
-                          {task.amount && (
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {task.currency || "GBP"} {task.amount.toFixed(2)}
-                            </div>
-                          )}
-                          {task.orderNumber && (
-                            <div className="text-xs">Order: {task.orderNumber}</div>
-                          )}
-                          {task.dueDate && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(task.dueDate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Activity Log */}
+        <div className="flex flex-col gap-8 lg:col-span-1">
+          <section className="flex flex-col h-full">
+            <h3 className="text-white text-lg font-bold leading-tight mb-4 flex items-center gap-2 font-display">
+              <span className="material-symbols-outlined text-primary">psychology</span>
+              Donna's Activity Log
+            </h3>
+            <div className="rounded-xl border border-border-dark bg-card-dark flex-1 p-4">
+              <div className="flex flex-col gap-6 relative">
+                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-[#233648]"></div>
+                {activityLog.length === 0 ? (
+                  <div className="p-4 text-center text-[#556980] text-sm">No recent activity.</div>
+                ) : (
+                  activityLog.map((log: any, idx: number) => (
+                    <div key={idx} className="flex gap-4 relative">
+                      <div className={`z-10 h-10 w-10 rounded-full bg-[#111a22] border-2 flex items-center justify-center flex-shrink-0
+                        ${log.color.includes('bg') ? '' : log.color === 'primary' ? 'border-primary text-primary' :
+                          log.color === 'red-500' ? 'border-red-500 text-red-500' :
+                            log.color === 'green-500' ? 'border-green-500 text-green-500' : 'border-border-dark text-[#92adc9]'}`}>
+                        <span className="material-symbols-outlined text-lg">{log.icon}</span>
+                      </div>
+                      <div className="flex flex-col pt-1">
+                        <p className="text-white text-sm font-medium">{log.title}</p>
+                        <p className="text-[#92adc9] text-xs mt-0.5">{log.desc}</p>
+                        <span className="text-[#55708c] text-[10px] mt-1">{log.time}</span>
                       </div>
                     </div>
-                    <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-                      {task.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                {task.stages && task.stages.length > 0 && (
-                  <CardContent className="pt-0">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Progress</span>
-                        <span className="text-gray-600">
-                          {task.stages.filter(s => s.completed).length}/{task.stages.length} stages
-                        </span>
-                      </div>
-                      <Progress value={getStageProgress(task.stages)} className="h-2" />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                        {task.stages.map((stage, index) => (
-                          <div 
-                            key={index}
-                            className={`flex items-center gap-2 text-sm p-2 rounded ${
-                              stage.completed ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-600"
-                            }`}
-                          >
-                            {stage.completed ? (
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Clock className="h-3 w-3 text-gray-400" />
-                            )}
-                            <span>{stage.stage}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
+                  ))
                 )}
-              </Card>
-            ))
-          )}
+              </div>
+            </div>
+          </section>
         </div>
-      </main>
+
+        {/* Right Column: Delegated Tasks Table */}
+        <div className="flex flex-col gap-8 lg:col-span-2">
+          <section className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white text-lg font-bold leading-tight font-display">Delegated Tasks</h3>
+              <div className="flex gap-2">
+                <button className="px-3 py-1.5 rounded-lg bg-[#1f2e3d] text-white text-xs font-bold border border-border-dark hover:border-primary/50 transition-colors">All Tasks</button>
+              </div>
+            </div>
+
+            <div className="w-full overflow-hidden rounded-xl border border-border-dark bg-card-dark">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#92adc9]">
+                  <thead className="bg-[#111a22] text-xs uppercase font-bold text-white">
+                    <tr>
+                      <th className="px-6 py-4" scope="col">Task Name</th>
+                      <th className="px-6 py-4" scope="col">Delegated To</th>
+                      <th className="px-6 py-4 text-center" scope="col">Status</th>
+                      <th className="px-6 py-4" scope="col">Donna's Insight</th>
+                      <th className="px-6 py-4 text-right" scope="col">Deadline</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-dark">
+                    {delegations.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-[#556980]">
+                          No active delegations found. Create a new task to get started.
+                        </td>
+                      </tr>
+                    ) : (
+                      delegations.map((task: any) => (
+                        <tr key={task.id} className={`hover:bg-[#1f2e3d] transition-colors ${task.isBlocked ? 'bg-red-500/5' : ''}`}>
+                          <td className="px-6 py-4 font-medium text-white">
+                            <div className="flex flex-col">
+                              <span>{task.name}</span>
+                              <span className={`text-[10px] font-normal ${task.isBlocked ? 'text-red-400' : 'text-[#55708c]'}`}>ID: #{task.id}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-6 w-6 rounded-full ${task.assignee.color} flex items-center justify-center text-[10px] text-white font-bold`}>
+                                {task.assignee.icon ? <span className="material-symbols-outlined text-[14px]">{task.assignee.icon}</span> : task.assignee.initials}
+                              </div>
+                              <span>{task.assignee.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {task.isBlocked ? (
+                              <span className="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20">Blocked</span>
+                            ) : task.isOverdue ? (
+                              <span className="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-xs font-medium text-orange-400 ring-1 ring-inset ring-orange-400/20">Overdue</span>
+                            ) : task.status === 'Reviewing' ? (
+                              <span className="inline-flex items-center rounded-md bg-purple-400/10 px-2 py-1 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-400/20">Reviewing</span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-md bg-blue-400/10 px-2 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-400/20">{task.status}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-xs">
+                            <span className={task.isBlocked ? 'text-red-300' : ''}>{task.insight}</span>
+                          </td>
+                          <td className={`px-6 py-4 text-right font-mono ${task.isOverdue ? 'text-orange-400' : 'text-white'}`}>
+                            {task.deadline}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

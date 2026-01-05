@@ -3,53 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --background: hsl(220, 33%, 98%);
+  --foreground: hsl(222, 47%, 11%);
+  --muted: hsl(210, 40%, 96.1%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
   --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --popover-foreground: hsl(222.2, 84%, 4.9%);
   --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(220, 91%, 60%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(60, 4.8%, 95.9%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
-  --radius: 0.5rem;
-  
-  /* Donna AI specific colors */
-  --donna-blue: hsl(220, 91%, 60%);
-  --donna-indigo: hsl(243, 75%, 59%);
+  --card-foreground: hsl(222.2, 84%, 4.9%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
+  --primary: #137fec;
+  --primary-foreground: hsl(210, 40%, 98%);
+  --radius: 0.25rem;
 }
 
 .dark {
-  --background: hsl(240, 10%, 3.9%);
+  --background: #101922;
   --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
+  --muted: #192633;
+  --muted-foreground: #92adc9;
+  --popover: #192633;
   --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
+  --card: #192633;
   --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(220, 91%, 60%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
-  --radius: 0.5rem;
+  --border: #324d67;
+  --input: #324d67;
+  --primary: #137fec;
+  --primary-foreground: hsl(210, 40%, 98%);
+  --radius: 0.25rem;
 }
 
 @layer base {
@@ -58,29 +40,34 @@
   }
 
   body {
-    @apply font-sans antialiased bg-slate-50 text-foreground;
-    font-family: 'Inter', sans-serif;
+    @apply font-body antialiased bg-background-light dark:bg-background-dark text-slate-900 dark:text-white;
+    font-family: 'Noto Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
   }
 }
 
 @layer utilities {
-  .text-donna-blue {
-    color: var(--donna-blue);
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
   }
-  
-  .text-donna-indigo {
-    color: var(--donna-indigo);
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-primary;
   }
-  
-  .bg-donna-blue {
-    background-color: var(--donna-blue);
+
+  .dark .text-gradient {
+    @apply from-white to-blue-400;
   }
-  
-  .bg-donna-indigo {
-    background-color: var(--donna-indigo);
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
-  
-  .border-donna-blue {
-    border-color: var(--donna-blue);
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

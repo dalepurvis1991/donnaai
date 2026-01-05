@@ -1,0 +1,14 @@
+Starting PAGED debug...
+User: dalepurvis@floorgiants.co.uk
+Clearing emails...
+Fetching page. Current count: 0. Token: undefined...
+ERROR: Error: invalid_grant
+Error: invalid_grant
+    at Gaxios._request (C:\Users\dalep\OneDrive\Desktop\donnaai\node_modules\gaxios\src\gaxios.ts:211:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async OAuth2Client.refreshTokenNoCache (C:\Users\dalep\OneDrive\Desktop\donnaai\node_modules\google-auth-library\build\src\auth\oauth2client.js:259:19)
+    at async OAuth2Client.refreshAccessTokenAsync (C:\Users\dalep\OneDrive\Desktop\donnaai\node_modules\google-auth-library\build\src\auth\oauth2client.js:288:19)
+    at async OAuth2Client.requestAsync (C:\Users\dalep\OneDrive\Desktop\donnaai\node_modules\google-auth-library\build\src\auth\oauth2client.js:505:21)
+    at async createAPIRequestAsync (C:\Users\dalep\OneDrive\Desktop\donnaai\node_modules\googleapis-common\build\src\apirequest.js:308:25)
+    at async GmailApiService.fetchEmailsPage (C:\Users\dalep\OneDrive\Desktop\donnaai\server\services\gmailApiService.ts:277:24)
+    at async runDebug (C:\Users\dalep\OneDrive\Desktop\donnaai\debug-bulk-pagination.ts:44:28)
