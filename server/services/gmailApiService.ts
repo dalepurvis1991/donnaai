@@ -2,6 +2,24 @@ import { google } from 'googleapis';
 import type { InsertEmail, User } from '@shared/schema';
 
 export class GmailApiService {
+  private getGmailClient(user: User) {
+    if (!user.googleAccessToken) {
+      throw new Error('User has no Google access token');
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      'https://baron-inbox-dalepurvis.replit.app/api/auth/google/callback'
+    );
+    oauth2Client.setCredentials({
+      access_token: user.googleAccessToken,
+      refresh_token: user.googleRefreshToken,
+    });
+
+    return google.gmail({ version: 'v1', auth: oauth2Client });
+  }
+
   async fetchUserEmails(user: User, count: number = 100): Promise<InsertEmail[]> {
     if (!user.googleAccessToken) {
       throw new Error('User has no Google access token');
@@ -17,31 +35,33 @@ export class GmailApiService {
         userHasRefreshToken: !!user.googleRefreshToken
       });
       
-      // Set up OAuth2 client with user's tokens
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        'https://baron-inbox-dalepurvis.replit.app/api/auth/google/callback'
-      );
-      oauth2Client.setCredentials({
-        access_token: user.googleAccessToken,
-        refresh_token: user.googleRefreshToken,
-      });
+      const gmail = this.getGmailClient(user);
 
-      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      const messages: Array<{ id?: string | null }> = [];
+      let pageToken: string | undefined;
 
-      // Get list of recent emails
-      const response = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: count,
-        q: 'in:inbox', // Only inbox emails
-      });
+      while (messages.length < count) {
+        const response = await gmail.users.messages.list({
+          userId: 'me',
+          maxResults: Math.min(500, count - messages.length),
+          q: 'in:inbox', // Only inbox emails
+          pageToken,
+        });
 
-      const messages = response.data.messages || [];
+        messages.push(...(response.data.messages || []));
+
+        if (!response.data.nextPageToken) {
+          break;
+        }
+
+        pageToken = response.data.nextPageToken;
+      }
+
+      const limitedMessages = messages.slice(0, count);
       const emails: InsertEmail[] = [];
 
       // Fetch details for each email
-      for (const message of messages) {
+      for (const message of limitedMessages) {
         if (!message.id) continue;
 
         try {
@@ -207,15 +227,26 @@ export class GmailApiService {
   async fetchEmailsInBatch(user: User, limit: number = 1000): Promise<InsertEmail[]> {
     try {
       const gmail = this.getGmailClient(user);
-      
-      // Get list of messages with higher limit
-      const listResponse = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: limit,
-        q: 'in:inbox OR in:sent -in:spam -in:trash'
-      });
 
-      const messages = listResponse.data.messages || [];
+      const messages: Array<{ id?: string | null }> = [];
+      let pageToken: string | undefined;
+
+      while (messages.length < limit) {
+        const listResponse = await gmail.users.messages.list({
+          userId: 'me',
+          maxResults: Math.min(500, limit - messages.length),
+          q: 'in:inbox OR in:sent -in:spam -in:trash',
+          pageToken,
+        });
+
+        messages.push(...(listResponse.data.messages || []));
+
+        if (!listResponse.data.nextPageToken) {
+          break;
+        }
+
+        pageToken = listResponse.data.nextPageToken;
+      }
       const emails: InsertEmail[] = [];
 
       // Process messages in batches of 10 to avoid rate limits

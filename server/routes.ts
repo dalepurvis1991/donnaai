@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task management routes
   app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const statuses = req.query.status ? [req.query.status] : undefined;
       const tasks = await storage.getUserTasks(userId, statuses);
       res.json(tasks);
@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const task = await storage.createTask({ ...req.body, userId });
       res.json(task);
     } catch (error) {
@@ -98,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tasks/:id/comments', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const comment = await storage.createTaskComment({
         ...req.body,
         taskId: parseInt(req.params.id),
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email processing for task detection
   app.post('/api/tasks/process-email', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { emailId, emailContent } = req.body;
       
       await taskService.processEmailForTasks(emailId, emailContent, userId);
@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.json({ 
@@ -287,7 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch large number of emails for learning context
       const { gmailApiService } = await import("./services/gmailApiService");
-      const newEmails = await gmailApiService.fetchUserEmails(user, limit);
+      const newEmails = await gmailApiService.fetchEmailsInBatch(user, limit);
       
       // Store new emails and process for learning
       const createdEmails = [];
@@ -357,6 +357,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const email of newEmails) {
         const createdEmail = await storage.createEmail(email);
         createdEmails.push(createdEmail);
+
+        if (createdEmail.id) {
+          try {
+            await taskService.processEmailForTasks(createdEmail.id, email, userId);
+          } catch (taskError) {
+            console.log("Task detection skipped:", taskError.message);
+          }
+        }
       }
       
       // Detect correlations for new emails (safely)

@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import { openaiService } from "./openaiService";
+import { openaiService, TaskDetectionSchema, TaskUpdateSchema } from "./openaiService";
 
 export interface TaskDetectionResult {
   isTask: boolean;
@@ -90,7 +90,7 @@ Respond with JSON in this format:
 
       const response = await openaiService.generateStructuredResponse(prompt, "task_detection", {
         type: "json_schema",
-        zodSchema: (openaiService as any).TaskDetectionSchema || z.object({}), // Workaround if I didn't export it
+        zodSchema: TaskDetectionSchema,
         name: "task_detection"
       });
 
@@ -163,22 +163,7 @@ Respond with JSON:
 
       const response = await openaiService.generateStructuredResponse(prompt, "task_update", {
         type: "json_schema",
-        zodSchema: z.object({
-          hasUpdate: z.boolean(),
-          confidence: z.number(),
-          status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
-          stages: z.array(z.object({
-            stage: z.string(),
-            completed: z.boolean(),
-            completedAt: z.string().optional(),
-            emailId: z.number().optional()
-          })),
-          orderNumber: z.string().optional(),
-          invoiceNumber: z.string().optional(),
-          amount: z.number().optional(),
-          completedAt: z.string().optional(),
-          reasoning: z.string()
-        }),
+        zodSchema: TaskUpdateSchema,
         name: "task_update"
       });
 
