@@ -1,8 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { DecisionDetailSheet } from "@/components/DecisionDetailSheet";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useState } from "react";
 
 export default function DecisionFeed() {
     const { user } = useAuth();
@@ -14,30 +17,44 @@ export default function DecisionFeed() {
         refetchInterval: 15000,
     });
 
-    // TODO: Add mutation for resolving decisions
-    // const resolveMutation = useMutation({...})
+    // Mutation for resolving decisions
+    const resolveMutation = useMutation({
+        mutationFn: async ({ id, status, feedback }: { id: number, status: string, feedback?: string }) => {
+            await apiRequest("POST", `/api/decisions/${id}/resolve`, { status, feedback });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/decisions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/orchestrator/brief"] });
+            toast({ title: "Decision Processed", description: "The system has been updated successfully." });
+            setSelectedDecision(null);
+        },
+        onError: () => {
+            toast({ title: "Error", description: "Failed to resolve decision.", variant: "destructive" });
+        }
+    });
 
     // Map API data to Feed Items structure
-    // We assume the backend returns a uniform 'Decision' or 'AuditLog' shape that we map here
-    // If usage of AuditLogs is intended for the feed, we should fetch that too.
-    // For now, let's map 'decisions' to the feed format.
     const feedItems = decisions?.map((d: any) => ({
         id: d.id,
-        type: d.type === 'blocked' ? 'blocked' : 'review', // Simplified mapping
+        type: d.type === 'blocked' ? 'blocked' : 'review',
         title: d.summary || "Pending Decision",
         timestamp: new Date(d.createdAt),
-        description: d.description || d.reasoning || "Action required.",
+        description: d.description || d.riskNotes || d.reasoning || "Action required.",
         meta: {
             label: d.priority === 'high' ? 'Urgent' : 'Review',
             color: d.priority === 'high' ? 'red' : 'primary'
         },
-        reasoning: d.reasoning,
+        confidence: d.metadata?.confidenceUsed || 0,
+        reasoning: d.riskNotes ? `Identified risk: ${d.riskNotes}` : "Requires manual approval due to sensitive category.",
         subtitle: d.metadata?.emailSubject || "",
         actions: [
             { label: "Dismiss", variant: "ghost" },
             { label: "Resolve", variant: "primary", icon: "check_circle" }
         ]
     })) || [];
+
+    // State for selected decision
+    const [selectedDecision, setSelectedDecision] = useState<any>(null);
 
     if (isLoading) {
         return <div className="p-12 text-center text-[#92adc9]">Loading feed...</div>;
@@ -57,7 +74,7 @@ export default function DecisionFeed() {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <p className="text-[#92adc9] text-xs font-medium">Donna is online</p>
+                        <p className="text-[#92adc9] text-xs font-medium">Donna is online & monitoring</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -76,11 +93,13 @@ export default function DecisionFeed() {
             <div className="flex flex-col gap-6 pt-4">
                 {feedItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center opacity-70">
-                        <div className="h-16 w-16 rounded-full bg-[#233648] flex items-center justify-center text-[#92adc9] mb-4">
-                            <span className="material-symbols-outlined text-3xl">inbox</span>
+                        <div className="h-16 w-16 rounded-full bg-[#233648] flex items-center justify-center text-primary mb-4 shadow-glow-sm">
+                            <span className="material-symbols-outlined text-3xl animate-pulse">psychology</span>
                         </div>
-                        <h3 className="text-white font-bold text-lg mb-1">Your Feed is Empty</h3>
-                        <p className="text-[#92adc9] text-sm max-w-xs">Donna hasn't found any items requiring your attention yet. Check back later!</p>
+                        <h3 className="text-white font-bold text-lg mb-1">Donna is Online</h3>
+                        <p className="text-[#92adc9] text-sm max-w-sm">
+                            I am actively monitoring your business intelligence protocols. No critical decisions require your attention at this moment.
+                        </p>
                     </div>
                 ) : (
                     feedItems.map((item: any) => {
@@ -113,6 +132,12 @@ export default function DecisionFeed() {
                             icon = "low_priority";
                         }
 
+                        // Confidence color logic
+                        const confScore = Math.round(item.confidence * 100);
+                        let confColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                        if (confScore < 85) confColor = "text-orange-400 bg-orange-500/10 border-orange-500/20";
+                        if (confScore < 70) confColor = "text-red-400 bg-red-500/10 border-red-500/20";
+
                         return (
                             <article key={item.id} className={`flex flex-col gap-4 p-5 rounded-xl border ${borderColor} bg-[#192633] relative group shadow-sm transition-all ${hoverBorder}`}>
                                 <div className={`absolute left-0 top-4 bottom-4 w-1 ${barColor} rounded-r-full`}></div>
@@ -134,6 +159,10 @@ export default function DecisionFeed() {
                                                         {item.meta.label}
                                                     </span>
                                                 )}
+                                                {/* Confidence Badge */}
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${confColor}`}>
+                                                    {confScore}% Confidence
+                                                </span>
                                             </div>
                                             <p className="text-[#92adc9] text-xs">
                                                 {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
@@ -146,6 +175,16 @@ export default function DecisionFeed() {
                                     </button>
                                 </div>
 
+                                {/* Reasoning / Meta Context */}
+                                <div className="pl-[66px] pr-4">
+                                    <div className="flex items-start gap-2 mb-2 bg-[#233648]/50 p-2 rounded border border-border-dark/50">
+                                        <span className="material-symbols-outlined text-primary text-[16px] mt-0.5">psychology</span>
+                                        <p className="text-[#92adc9] text-[11px] italic leading-tight">
+                                            "{item.aiReasoning || item.reasoning || "I have flagged this for your review based on established priority protocols."}"
+                                        </p>
+                                    </div>
+                                </div>
+
                                 {/* Content Body */}
                                 <div className="pl-[66px] pr-4">
                                     <p className="text-slate-300 text-sm leading-relaxed mb-3">
@@ -155,11 +194,13 @@ export default function DecisionFeed() {
 
                                 {/* Footer Actions */}
                                 <div className="pl-[66px] flex items-center justify-between mt-1">
-                                    <Link href={`/tasks/${item.id}`}> {/* Temporary link */}
-                                        <div className="group/why relative flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors">
-                                            <span className="text-[#556980] text-xs font-medium border-b border-dashed border-[#556980] group-hover:text-primary group-hover:border-primary transition-colors">View Details</span>
-                                        </div>
-                                    </Link>
+                                    {/* View Details triggers Sheet */}
+                                    <div
+                                        onClick={() => setSelectedDecision(item)}
+                                        className="group/why relative flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors"
+                                    >
+                                        <span className="text-[#556980] text-xs font-medium border-b border-dashed border-[#556980] group-hover:text-primary group-hover:border-primary transition-colors">View Details</span>
+                                    </div>
 
                                     <div className="flex gap-3">
                                         {item.actions.map((action: any, idx: number) => {
@@ -170,7 +211,9 @@ export default function DecisionFeed() {
                                             else btnClass += " border-border-dark hover:bg-[#233648] hover:border-white/20"; // outline default
 
                                             return (
-                                                <button key={idx} className={btnClass}>
+                                                <button key={idx} className={btnClass} onClick={() => {
+                                                    if (action.label === 'Resolve') setSelectedDecision(item);
+                                                }}>
                                                     {action.label}
                                                     {action.icon && <span className="material-symbols-outlined text-[16px]">{action.icon}</span>}
                                                 </button>
@@ -190,6 +233,22 @@ export default function DecisionFeed() {
                     <p className="text-[#92adc9] text-sm font-medium">You're all caught up!</p>
                 </div>
             </div>
+
+            {/* Decision Details Sheet */}
+            <DecisionDetailSheet
+                decision={selectedDecision}
+                open={!!selectedDecision}
+                onOpenChange={(open) => !open && setSelectedDecision(null)}
+                onResolve={(id, action) => {
+                    if (action === 'snooze') {
+                        resolveMutation.mutate({ id, status: 'snoozed' as any, feedback: "Snoozed for later" });
+                        setSelectedDecision(null);
+                        return;
+                    }
+                    const status = action === 'approve' ? 'approved' : 'rejected';
+                    resolveMutation.mutate({ id, status, feedback: "Resolved via UI" });
+                }}
+            />
         </div>
     );
 }

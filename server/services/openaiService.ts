@@ -401,6 +401,7 @@ Generate a reply that:
   getDailyBriefingSchema() {
     return z.object({
       summary: z.string(),
+      priorities: z.array(z.string()),
       questions: z.array(z.object({
         id: z.string(),
         text: z.string(),

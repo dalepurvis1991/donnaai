@@ -77,7 +77,7 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <span className="text-[#92adc9] text-sm">Current Plan</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${user?.planType === 'free' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
-                    'bg-primary/20 text-blue-300 border-primary/30'
+                  'bg-primary/20 text-blue-300 border-primary/30'
                   }`}>
                   {user?.planType || 'Free'}
                 </span>
@@ -167,6 +167,12 @@ export default function Settings() {
             <div className="rounded-xl border border-border-dark bg-card-dark p-6">
               <div className="flex flex-col gap-4">
                 <label className="text-white text-sm font-bold">System Prompt / Persona</label>
+                <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg mb-1">
+                  <span className="material-symbols-outlined text-amber-500 text-[18px] mt-0.5">warning</span>
+                  <p className="text-amber-500/90 text-xs leading-relaxed">
+                    <strong>Caution:</strong> Modifying the core persona can lead to unpredictable behavior. Only edit if you are an advanced user.
+                  </p>
+                </div>
                 <p className="text-[#92adc9] text-xs">Define how Donna should act. This overrides default behaviors.</p>
                 <textarea
                   className="w-full h-32 bg-[#111a22] border border-border-dark rounded-lg p-3 text-sm text-white focus:outline-none focus:border-primary transition-colors resize-none font-mono"

@@ -34,8 +34,12 @@ export function DailyBrief() {
                     Donna AI Orchestrator
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight text-white italic">
-                    {brief.donnaVoice}
+                    {brief.donnaVoice.split('Based on')[0].trim() || "Your business intelligence is fully synchronized."}
                 </h1>
+                <div className="text-[#92adc9] text-sm font-medium flex items-center gap-2 mt-1">
+                    <span className="material-symbols-outlined text-[18px]">analytics</span>
+                    Based on {brief.emailCount} emails and {brief.delegationsCount} active delegations.
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

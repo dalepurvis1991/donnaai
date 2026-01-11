@@ -4,6 +4,7 @@ import { Email } from "@shared/schema";
 
 export interface BriefingResult {
     summary: string;
+    priorities: string[];
     questions: {
         id: string;
         text: string;
@@ -16,13 +17,15 @@ export interface BriefingResult {
 export class BriefingService {
     async generateDailyBriefing(userId: string): Promise<BriefingResult> {
         try {
-            // 1. Get unread/unprocessed emails
+            // 1. Get recent emails (scans both read and unread for context)
             const emails = await storage.getEmails(userId);
-            const unreadEmails = emails.filter(e => !e.isRead).slice(0, 10); // Limit to 10 for briefing
+            // Sort by receivedDate descending if possible, or just take the raw list if already sorted by the query
+            const recentEmails = emails.slice(0, 50);
 
-            if (unreadEmails.length === 0) {
+            if (recentEmails.length === 0) {
                 return {
-                    summary: "Your neural core is synchronized. No new urgent traces detected.",
+                    summary: "Your neural core is synchronized. No recent traces detected.",
+                    priorities: [],
                     questions: []
                 };
             }
@@ -32,7 +35,7 @@ export class BriefingService {
             const protocols = profile?.learningProtocols || [];
 
             // 3. Generate summary and questions via LLM
-            const emailContext = unreadEmails.map(e => ({
+            const emailContext = recentEmails.map(e => ({
                 id: e.id,
                 from: e.sender,
                 subject: e.subject,
@@ -41,26 +44,21 @@ export class BriefingService {
 
             const prompt = `
 Generate a concise executive briefing for the following unread emails.
-Also, generate 1-2 critical "Direction Questions" where the AI identifies an action but needs user confirmation.
+1. Summarize the key activity.
+2. Identify 3-5 "Strategic Priorities" (high-level goals or blockers) based on these emails.
+3. Generate 1-2 "Direction Questions" for ambiguous items.
 
 User Style Context: ${profile?.stylePrompt || "Professional and efficient"}
-Learning Protocols (Prior Feedback): ${JSON.stringify(protocols)}
+Learning Protocols: ${JSON.stringify(protocols)}
 
 Emails:
 ${JSON.stringify(emailContext)}
 
-Your response MUST be a JSON object:
+Response JSON:
 {
-  "summary": "A 2-3 sentence summary of the latest activity",
-  "questions": [
-    {
-      "id": "unique_str",
-      "text": "The question to ask the user (e.g. 'Should I email Chris and say yes?')",
-      "context": "Brief context why this is being asked",
-      "proposedAction": "The draft or action you intend to take",
-      "emailId": number
-    }
-  ]
+  "summary": "2-3 sentence summary",
+  "priorities": ["Priority 1", "Priority 2"],
+  "questions": [...]
 }
 `;
 
@@ -70,11 +68,26 @@ Your response MUST be a JSON object:
                 name: "daily_briefing"
             });
 
+            if (!response.priorities || response.priorities.length === 0) {
+                // Fallback for V1 if LLM is too conservative or context is sparse
+                response.priorities = [
+                    "Review recent email activity",
+                    "Verify agent configuration settings",
+                    "Check pending tasks"
+                ];
+            }
+
+            // 4. Save priorities to Operational Memory
+            if (response.priorities && response.priorities.length > 0) {
+                await storage.upsertOperationalMemory(userId, "priorities", response.priorities);
+            }
+
             return response;
         } catch (error) {
             console.error("Error generating daily briefing:", error);
             return {
                 summary: `Error synchronizing briefing protocols: ${(error as Error).message}`,
+                priorities: [],
                 questions: []
             };
         }

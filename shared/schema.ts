@@ -269,7 +269,7 @@ export const decisions = pgTable("decisions", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
   type: varchar("type", { enum: ["spend", "publish", "pricing", "external_comms", "data_change", "task_approval", "other"] }).notNull(),
-  status: varchar("status", { enum: ["pending", "approved", "rejected"] }).default("pending"),
+  status: varchar("status", { enum: ["pending", "approved", "rejected", "snoozed"] }).default("pending"),
   summary: text("summary").notNull(),
   recommendedOption: text("recommended_option"),
   riskNotes: text("risk_notes"),
@@ -281,7 +281,9 @@ export const decisions = pgTable("decisions", {
     confidenceUsed?: number;
     thresholdUsed?: number;
   }>().default({}),
-  decisionTaken: text("decision_taken"), // Store reasoning/feedback here
+  decisionTaken: text("decision_taken"), // Store user's reasoning/feedback here
+  aiReasoning: text("ai_reasoning"), // AI's analysis for why this decision is needed
+  confidence: real("confidence"), // AI confidence score (0-1)
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });

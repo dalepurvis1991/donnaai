@@ -1,4 +1,7 @@
+import { google } from 'googleapis';
 import { storage } from '../storage';
+import type { User, InsertEmail } from '@shared/schema';
+
 
 export class GmailApiService {
   async fetchUserEmails(user: User, count: number = 100): Promise<InsertEmail[]> {
@@ -33,35 +36,64 @@ export class GmailApiService {
 
       const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-      // Get list of recent emails
-      const response = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: count,
-        q: 'in:inbox', // Only inbox emails
-      });
+      const messages: any[] = [];
+      let nextPageToken: string | undefined = undefined;
+      const MAX_PER_PAGE = 100; // Gmail API limit per page is often 100-500
 
-      const messages = response.data.messages || [];
+      // Pagination Loop
+      do {
+        // Calculate how many more we need
+        const remaining = count - messages.length;
+        if (remaining <= 0) break;
+
+        const limit = Math.min(remaining, MAX_PER_PAGE);
+
+        const response: any = await gmail.users.messages.list({
+          userId: 'me',
+          maxResults: limit,
+          pageToken: nextPageToken,
+          q: 'in:inbox OR in:sent', // Fetch both received and sent emails
+        });
+
+        const newMessages = response.data.messages || [];
+        messages.push(...newMessages);
+
+        nextPageToken = response.data.nextPageToken;
+        console.log(`Gmail Sync: Fetched ${newMessages.length} messages. Total: ${messages.length}/${count}`);
+
+      } while (nextPageToken && messages.length < count);
+
       const emails: InsertEmail[] = [];
 
       // Fetch details for each email
-      for (const message of messages) {
-        if (!message.id) continue;
 
-        try {
-          const emailDetail = await gmail.users.messages.get({
-            userId: 'me',
-            id: message.id,
-            format: 'full',
-          });
+      // Fetch details for each email
 
-          const email = await this.parseGmailMessage(emailDetail.data, user.id, categoryMapping);
-          if (email) {
-            emails.push(email);
+
+      // Fetch details in batches to avoid rate limits but improve speed
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+        const chunk = messages.slice(i, i + BATCH_SIZE);
+        console.log(`Gmail Sync: Processing batch ${i} to ${i + chunk.length} of ${messages.length}`);
+
+        await Promise.all(chunk.map(async (message) => {
+          if (!message.id) return;
+
+          try {
+            const emailDetail = await gmail.users.messages.get({
+              userId: 'me',
+              id: message.id,
+              format: 'full',
+            });
+
+            const email = await this.parseGmailMessage(emailDetail.data, user.id, categoryMapping);
+            if (email) {
+              emails.push(email);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch email ${message.id}:`, error);
           }
-        } catch (error) {
-          console.error(`Failed to fetch email ${message.id}:`, error);
-          continue;
-        }
+        }));
       }
 
       return emails;

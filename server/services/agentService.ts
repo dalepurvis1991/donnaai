@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { gmailApiService } from "./gmailApiService";
 import { outlookApiService } from "./outlookApiService";
+import { calendarApiService } from "./calendarApiService";
 import { taskService } from "./taskService";
 import { correlationService } from "./correlationService";
 import { draftAssistantService } from "./draftAssistantService";
@@ -47,23 +48,42 @@ export class AgentService {
             const user = await storage.getUser(userId);
             if (!user || (!user.googleAccessToken && !user.microsoftAccessToken)) return;
 
+            // Determine email pull limit based on plan
+            const emailLimit = this.getEmailLimitForPlan(user.planType || 'free');
+            console.log(`Agent Service: Using email limit ${emailLimit} for plan ${user.planType || 'free'}`);
+
             // 1. Sync new emails
             const emailsToStorage: InsertEmail[] = [];
             if (user.googleAccessToken) {
                 try {
-                    const googleEmails = await gmailApiService.fetchUserEmails(user, 20);
+                    const googleEmails = await gmailApiService.fetchUserEmails(user, emailLimit);
                     emailsToStorage.push(...googleEmails);
                 } catch (e) { console.error(`Gmail sync failed: `, e); }
             }
             if (user.microsoftAccessToken) {
                 try {
-                    const outlookEmails = await outlookApiService.fetchUserEmails(user, 20);
+                    const outlookEmails = await outlookApiService.fetchUserEmails(user, emailLimit);
                     emailsToStorage.push(...outlookEmails);
                 } catch (e) { console.error(`Outlook sync failed: `, e); }
             }
 
             for (const emailData of emailsToStorage) {
                 await storage.upsertEmail(emailData);
+            }
+
+
+            // 1.5 Sync calendar events
+            if (user.googleAccessToken) {
+                try {
+                    console.log(`Agent Service: Syncing calendar for user ${userId}`);
+                    const googleEvents = await calendarApiService.fetchUserEvents(user, 7);
+                    for (const event of googleEvents) {
+                        await storage.createCalendarEvent(event);
+                    }
+                    console.log(`Agent Service: Synced ${googleEvents.length} calendar events for ${userId}`);
+                } catch (e) {
+                    console.error(`Calendar sync failed for user ${userId}: `, e);
+                }
             }
 
             // 2. Identify new items
@@ -91,6 +111,22 @@ export class AgentService {
             const context = await memoryService.getFullContext(user.id);
 
             // Stage 2: Triage (Extract & Classify)
+
+            // Bypass triage for purely sent emails (context only)
+            // We use loose matching in case of aliases, but primary email is best
+            const isSentEmail = email.senderEmail.toLowerCase() === user.email?.toLowerCase();
+
+            if (isSentEmail) {
+                console.log(`Agent Service: Email ${email.id} is SENT by user. Skipping triage queue.`);
+                // We still want it in memory (Stage 1 was done), just not in the decision queue
+                await storage.updateEmail(email.id, {
+                    category: 'Sent',
+                    isProcessed: true,
+                    aiSummary: "Sent by user - stored for context"
+                });
+                return;
+            }
+
             const triagePrompt = `
 Analyze this email for a business orchestrator (Donna).
 Email: "${email.subject}"
@@ -175,6 +211,21 @@ Extract intent, entities (customer, order, deadline), and classify urgency/impac
             'data_change': 'data_change'
         };
         return (intent && mapping[intent]) || 'other';
+    }
+
+    private getEmailLimitForPlan(planType: string): number {
+        // Tiered email pull limits based on subscription
+        switch (planType) {
+            case 'yearly':
+            case 'pro':
+                return 250; // Pro users get 250 per sync (up to 1000 total context)
+            case 'monthly':
+            case 'trial':
+                return 100; // Trial/Monthly users get 100
+            case 'free':
+            default:
+                return 50; // Free users get 50
+        }
     }
 }
 

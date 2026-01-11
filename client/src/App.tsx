@@ -13,12 +13,9 @@ import Settings from "@/pages/settings";
 import EmailDetail from "@/pages/email-detail";
 import Chat from "@/pages/chat";
 import Memories from "@/pages/memories";
-import Folders from "@/pages/folders";
 import Digest from "@/pages/digest";
 import BulkProcessing from "@/pages/bulk-processing";
 import Tasks from "@/pages/tasks";
-import Correlations from "@/pages/correlations";
-import TeamMembers from "@/pages/team-members";
 import NotFound from "@/pages/not-found";
 import { AppShell } from "@/components/AppShell";
 
@@ -49,6 +46,8 @@ function Router() {
         <div className="min-h-screen flex items-center justify-center bg-[#030711]">
           <div className="text-lg text-white">Initializing Neural Core...</div>
         </div>
+      ) : !isAuthenticated ? (
+        <Landing />
       ) : (
         <Switch>
           <Route path="/onboarding" component={Onboarding} />
@@ -60,14 +59,9 @@ function Router() {
                 <Route path="/email/:id" component={EmailDetail} />
                 <Route path="/chat" component={Chat} />
                 <Route path="/memories" component={Memories} />
-                <Route path="/folders" component={Folders} />
                 <Route path="/digest" component={Digest} />
                 <Route path="/tasks" component={Tasks} />
-                <Route path="/correlations" component={Correlations} />
                 <Route path="/bulk-processing" component={BulkProcessing} />
-                <Route path="/team" component={TeamMembers} />
-                <Route path="/decision-feed" component={Dashboard} /> {/* Temporary until created */}
-                <Route path="/audit" component={Dashboard} /> {/* Temporary until created */}
                 <Route component={NotFound} />
               </Switch>
             </AppShell>
@@ -78,6 +72,7 @@ function Router() {
     </Switch>
   );
 }
+
 
 function App() {
   return (

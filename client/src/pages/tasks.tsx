@@ -2,13 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 
-export default function Tasks() {
+export default function Delegations() {
   const { user } = useAuth();
 
   // Feature Gating
   const isFree = user?.planType === 'free';
 
-  // Fetch Tasks
+  // Fetch Delegations
   const { data: tasks, isLoading: tasksLoading } = useQuery<any>({
     queryKey: ["/api/tasks"],
     enabled: !isFree,
@@ -34,7 +34,7 @@ export default function Tasks() {
           <div className="flex flex-col gap-2 relative z-10">
             <h2 className="text-white text-2xl font-bold font-display">Delegations are Pro-only</h2>
             <p className="text-[#92adc9] text-sm leading-relaxed">
-              To assign tasks to Donna and track her progress as an agent, you need a subscription. The Free plan is limited to the Daily Brief.
+              To assign delegations to Donna and track her progress as an agent, you need a subscription. The Free plan is limited to the Daily Brief.
             </p>
           </div>
 
@@ -77,7 +77,7 @@ export default function Tasks() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h2 className="text-white text-4xl font-black leading-tight tracking-[-0.02em] font-display">Delegations by Donna</h2>
-          <p className="text-[#92adc9] text-base font-normal">Project manager view of tasks coordinated by AI</p>
+          <p className="text-[#92adc9] text-base font-normal">Project manager view of work coordinated by AI</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20">
@@ -89,7 +89,7 @@ export default function Tasks() {
           </div>
           <button className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-blue-500/20">
             <span className="material-symbols-outlined text-[20px]">add_task</span>
-            Delegate New Task
+            New Delegation
           </button>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function Tasks() {
           </div>
           <div className="flex items-baseline gap-3">
             <p className="text-white text-3xl font-bold leading-tight font-display">{delegations.length}</p>
-            <span className="text-[#92adc9] text-xs">Tasks in progress</span>
+            <span className="text-[#92adc9] text-xs">Items in progress</span>
           </div>
           <div className="w-full bg-[#111a22] rounded-full h-1.5 mt-3">
             <div className="bg-primary h-1.5 rounded-full" style={{ width: "65%" }}></div>
@@ -134,7 +134,7 @@ export default function Tasks() {
           </div>
           <div className="flex items-center gap-2 text-orange-400 text-sm font-medium">
             <span className="material-symbols-outlined text-[18px]">history</span>
-            Overdue Tasks
+            Overdue Delegations
           </div>
           <div className="flex items-baseline gap-3">
             <p className="text-white text-3xl font-bold leading-tight font-display">0</p>
@@ -184,9 +184,9 @@ export default function Tasks() {
         <div className="flex flex-col gap-8 lg:col-span-2">
           <section className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white text-lg font-bold leading-tight font-display">Delegated Tasks</h3>
+              <h3 className="text-white text-lg font-bold leading-tight font-display">Active Delegations</h3>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 rounded-lg bg-[#1f2e3d] text-white text-xs font-bold border border-border-dark hover:border-primary/50 transition-colors">All Tasks</button>
+                <button className="px-3 py-1.5 rounded-lg bg-[#1f2e3d] text-white text-xs font-bold border border-border-dark hover:border-primary/50 transition-colors">All Delegations</button>
               </div>
             </div>
 
@@ -195,7 +195,7 @@ export default function Tasks() {
                 <table className="w-full text-left text-sm text-[#92adc9]">
                   <thead className="bg-[#111a22] text-xs uppercase font-bold text-white">
                     <tr>
-                      <th className="px-6 py-4" scope="col">Task Name</th>
+                      <th className="px-6 py-4" scope="col">Delegation Name</th>
                       <th className="px-6 py-4" scope="col">Delegated To</th>
                       <th className="px-6 py-4 text-center" scope="col">Status</th>
                       <th className="px-6 py-4" scope="col">Donna's Insight</th>
@@ -206,7 +206,7 @@ export default function Tasks() {
                     {delegations.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-8 text-center text-[#556980]">
-                          No active delegations found. Create a new task to get started.
+                          No active delegations found. Create a new delegation to get started.
                         </td>
                       </tr>
                     ) : (

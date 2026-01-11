@@ -15,7 +15,6 @@ export function AppShell({ children }: AppShellProps) {
         { label: "Home", href: "/", icon: "home" },
         { label: "Decision Feed", href: "/decision-feed", icon: "dynamic_feed" },
         { label: "Delegations", href: "/tasks", icon: "assignment_ind" },
-        { label: "Gallery", href: "/gallery", icon: "collections" },
     ];
 
     const bottomItems = [
@@ -44,34 +43,8 @@ export function AppShell({ children }: AppShellProps) {
                         {menuItems.map((item) => {
                             const isActive = location === item.href;
                             return (
-                                <Link key={item.href} href={item.href}>
-                                    <a className={cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group border border-transparent",
-                                        isActive
-                                            ? "bg-primary/20 border-primary/20 text-white"
-                                            : "hover:bg-[#233648] text-[#92adc9] hover:text-white"
-                                    )}>
-                                        <span className={cn(
-                                            "material-symbols-outlined text-[20px]",
-                                            isActive ? "text-primary" : ""
-                                        )}>
-                                            {item.icon}
-                                        </span>
-                                        <p className="text-sm font-medium leading-normal">{item.label}</p>
-                                    </a>
-                                </Link>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                <div className="flex flex-col gap-2 pt-4 border-t border-border-dark">
-                    {bottomItems.map((item) => {
-                        const isActive = location === item.href;
-                        return (
-                            <Link key={item.href} href={item.href}>
-                                <a className={cn(
-                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group border border-transparent",
+                                <Link key={item.href} href={item.href} className={cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group border border-transparent cursor-pointer",
                                     isActive
                                         ? "bg-primary/20 border-primary/20 text-white"
                                         : "hover:bg-[#233648] text-[#92adc9] hover:text-white"
@@ -83,7 +56,29 @@ export function AppShell({ children }: AppShellProps) {
                                         {item.icon}
                                     </span>
                                     <p className="text-sm font-medium leading-normal">{item.label}</p>
-                                </a>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-4 border-t border-border-dark">
+                    {bottomItems.map((item) => {
+                        const isActive = location === item.href;
+                        return (
+                            <Link key={item.href} href={item.href} className={cn(
+                                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group border border-transparent cursor-pointer",
+                                isActive
+                                    ? "bg-primary/20 border-primary/20 text-white"
+                                    : "hover:bg-[#233648] text-[#92adc9] hover:text-white"
+                            )}>
+                                <span className={cn(
+                                    "material-symbols-outlined text-[20px]",
+                                    isActive ? "text-primary" : ""
+                                )}>
+                                    {item.icon}
+                                </span>
+                                <p className="text-sm font-medium leading-normal">{item.label}</p>
                             </Link>
                         );
                     })}

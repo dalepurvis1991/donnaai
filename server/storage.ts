@@ -121,12 +121,14 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private emails: Map<number, Email>;
   private users: Map<string, User>;
+  private decisions: Map<number, Decision>;
   private currentId: number;
   private lastUpdated: Date;
 
   constructor() {
     this.emails = new Map();
     this.users = new Map();
+    this.decisions = new Map();
     this.currentId = 1;
     this.lastUpdated = new Date();
   }
@@ -299,6 +301,9 @@ export class MemStorage implements IStorage {
       lastAgentRun: userData.lastAgentRun ?? (existing?.lastAgentRun || null),
       credits: (userData.credits !== undefined) ? userData.credits : (existing?.credits ?? 100),
       totalCreditsEarned: (userData.totalCreditsEarned !== undefined) ? userData.totalCreditsEarned : (existing?.totalCreditsEarned ?? 100),
+      planType: (userData.planType !== undefined) ? userData.planType : (existing?.planType ?? "free"),
+      trialEndsAt: (userData.trialEndsAt !== undefined) ? userData.trialEndsAt : (existing?.trialEndsAt ?? null),
+      subscriptionId: (userData.subscriptionId !== undefined) ? userData.subscriptionId : (existing?.subscriptionId ?? null),
       createdAt: existing?.createdAt || now,
       updatedAt: now,
     };
@@ -338,10 +343,55 @@ export class MemStorage implements IStorage {
   async updateFyiDigest(id: number, updates: any): Promise<any> { throw new Error("Not implemented"); }
   async markEmailsAsSeenInDonna(emailIds: number[]): Promise<void> { }
 
-  async createDecision(decision: InsertDecision): Promise<Decision> { throw new Error("Not implemented"); }
-  async getDecisions(userId: string, status?: string): Promise<Decision[]> { return []; }
-  async getDecisionById(id: number): Promise<Decision | undefined> { return undefined; }
-  async updateDecision(id: number, updates: Partial<Decision>): Promise<Decision> { throw new Error("Not implemented"); }
+  async createDecision(decisionData: InsertDecision): Promise<Decision> {
+    const id = this.currentId++;
+    const decision: Decision = {
+      id,
+      userId: decisionData.userId,
+      type: decisionData.type,
+      status: (decisionData.status ?? 'pending') as any,
+      summary: decisionData.summary,
+      recommendedOption: decisionData.recommendedOption ?? null,
+      riskNotes: decisionData.riskNotes ?? null,
+      metadata: (decisionData.metadata ?? {}) as any,
+      decisionTaken: decisionData.decisionTaken ?? null,
+      aiReasoning: decisionData.aiReasoning ?? null,
+      confidence: decisionData.confidence ?? null,
+      createdAt: new Date(),
+      resolvedAt: null,
+    };
+    this.decisions.set(id, decision);
+    return decision;
+  }
+
+  async getDecisions(userId: string, status?: string): Promise<Decision[]> {
+    const all = Array.from(this.decisions.values()) as Decision[];
+    const userDecisions = all.filter(d => d.userId === userId);
+    if (status) {
+      return userDecisions.filter(d => d.status === status).sort((a, b) => {
+        const bTime = (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
+        const aTime = (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+        return bTime - aTime;
+      });
+    }
+    return userDecisions.sort((a, b) => {
+      const bTime = (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
+      const aTime = (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+      return bTime - aTime;
+    });
+  }
+
+  async getDecisionById(id: number): Promise<Decision | undefined> {
+    return this.decisions.get(id);
+  }
+
+  async updateDecision(id: number, updates: Partial<Decision>): Promise<Decision> {
+    const existing = this.decisions.get(id);
+    if (!existing) throw new Error(`Decision ${id} not found`);
+    const updated = { ...existing, ...updates };
+    this.decisions.set(id, updated);
+    return updated;
+  }
 
   async getOperationalMemory(userId: string, key: string): Promise<OperationalMemory | undefined> { return undefined; }
   async upsertOperationalMemory(userId: string, key: string, value: any): Promise<OperationalMemory> { throw new Error("Not implemented"); }
@@ -363,7 +413,10 @@ export class MemStorage implements IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getEmails(userId: string): Promise<Email[]> {
-    return await db.select().from(emails).where(eq(emails.userId, userId)).orderBy(desc(emails.date));
+    console.log(`Storage: Fetching emails for user ${userId}...`);
+    const results = await db.select().from(emails).where(eq(emails.userId, userId)).orderBy(desc(emails.date));
+    console.log(`Storage: Found ${results.length} emails for user ${userId}`);
+    return results;
   }
 
   async getEmailsByCategory(userId: string, category: string): Promise<Email[]> {
@@ -430,13 +483,15 @@ export class DatabaseStorage implements IStorage {
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
 
-    return {
+    const result = {
       totalEmails: allEmails.length,
       fyiCount,
       draftCount,
       forwardCount,
       lastUpdated: user?.lastAgentRun ? user.lastAgentRun.toISOString() : new Date().toISOString(),
     };
+    console.log(`Storage: Stats for ${userId}:`, JSON.stringify(result));
+    return result;
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1263,9 +1318,9 @@ export class DatabaseStorage implements IStorage {
 
   async getDecisions(userId: string, status?: string): Promise<Decision[]> {
     if (status) {
-      return await db.select().from(decisions).where(and(eq(decisions.userId, userId), eq(decisions.status, status as any))).orderBy(desc(decisions.timestamp));
+      return await db.select().from(decisions).where(and(eq(decisions.userId, userId), eq(decisions.status, status as any))).orderBy(desc(decisions.createdAt));
     }
-    return await db.select().from(decisions).where(eq(decisions.userId, userId)).orderBy(desc(decisions.timestamp));
+    return await db.select().from(decisions).where(eq(decisions.userId, userId)).orderBy(desc(decisions.createdAt));
   }
 
   async getDecisionById(id: number): Promise<Decision | undefined> {

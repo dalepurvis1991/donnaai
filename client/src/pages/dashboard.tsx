@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { DecisionQueueCard } from "@/components/DecisionQueueCard";
+import { FlashQuestions } from "@/components/FlashQuestions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -26,6 +27,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orchestrator/brief"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/flash-questions"] });
       toast({
         title: "Briefing Refreshed",
         description: "Donna has updated your daily summary.",
@@ -54,8 +56,12 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-[1200px] mx-auto p-6 md:p-8 flex flex-col gap-6 pb-20 font-body">
+      {/* Flash Questions Carousel */}
+      <FlashQuestions />
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-primary mb-1">
             <span className="material-symbols-outlined text-lg">auto_awesome</span>
@@ -64,7 +70,11 @@ export default function Dashboard() {
           <h2 className="text-white text-4xl font-black leading-tight tracking-[-0.02em] font-display">
             Good Morning, {user?.firstName || "Alex"}
           </h2>
-          <p className="text-[#92adc9] text-base font-normal">
+          <div className="flex items-center gap-2 text-[#556980] text-xs font-medium mb-2 border border-[#233648] bg-[#111a22] px-2 py-1 rounded w-fit">
+            <span className="material-symbols-outlined text-[14px]">analytics</span>
+            <span>Based on analysis of {emailCount} emails and {delegationCount} active delegations</span>
+          </div>
+          <p className="text-[#92adc9] text-base font-normal leading-relaxed max-w-2xl">
             {brief?.donnaVoice || `Here is your summary for ${format(today, "EEEE, MMMM d")}`}
           </p>
         </div>
@@ -160,7 +170,7 @@ export default function Dashboard() {
                 <span className="material-symbols-outlined text-primary">check_circle</span>
                 Today's Priorities
               </h3>
-              <span className="text-[#92adc9] text-xs">Curated by Donna</span>
+              <span className="text-[#92adc9] text-xs font-medium uppercase tracking-wider">Strategic Focus</span>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -179,9 +189,9 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="text-white font-bold truncate">{p}</h4>
-                        <span className="bg-primary/20 text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded">Priority</span>
+                        <span className="bg-primary/20 text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded">Top Priority</span>
                       </div>
-                      <p className="text-[#92adc9] text-xs truncate">Donna is monitoring this objective.</p>
+                      <p className="text-[#92adc9] text-xs truncate">Donna is actively driving this outcome.</p>
                     </div>
                   </div>
                 ))

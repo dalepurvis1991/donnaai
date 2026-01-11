@@ -23,16 +23,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication is set up in index.ts via setupAuth
 
-  // Debug route to test callback URL
-  app.get('/api/test-callback', (req, res) => {
-    res.json({
-      message: 'Callback endpoint is reachable',
-      hostname: req.hostname,
-      url: req.url,
-      query: req.query
-    });
-  });
-
   // FYI Digest Routes
   app.post('/api/digests/generate', isAuthenticated, async (req: any, res) => {
     try {
@@ -498,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, feedback } = req.body;
       const userId = req.user.id;
 
-      if (!['approved', 'rejected'].includes(status)) {
+      if (!['approved', 'rejected', 'snoozed'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
 
@@ -555,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: d.id,
           title: d.summary || "Pending Decision",
           type: d.type || "review",
-          level: d.priority || "medium"
+          level: (d as any).priority || "medium"
         })),
         decisionsCount: pendingDecisions.length,
         delegationsCount: activeTasks.length,
@@ -664,7 +654,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual Refresh Endpoint
+  app.post('/api/emails/refresh', isAuthenticated, async (req: any, res) => {
+    try {
+      console.log("Manual refresh requested by user:", req.user.id);
+
+      // 1. Run the full agent suite (syncs emails, calendar, tasks)
+      // With the new tiered limits, this will pull 250 emails for Pro users
+      await import("./services/agentService").then(m => m.agentService.runSuite(req.user.id));
+
+      // 2. Regenerate the briefing immediately to populate priorities
+      await briefingService.generateDailyBriefing(req.user.id);
+
+      res.json({ message: "Refresh complete" });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      res.status(500).json({ message: "Failed to refresh data" });
+    }
+  });
+
   // Orchestrator Briefing Endpoint
+
   app.get('/api/orchestrator/brief', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -679,11 +689,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getOperationalMemory(userId, "priorities"),
         storage.getDecisions(userId, "pending"),
         storage.getUserTasks(userId),
-        storage.getUsersProjects ? storage.getUsersProjects(userId) : Promise.resolve([]),
+        storage.getProjects ? storage.getProjects(userId) : Promise.resolve([]),
         storage.getEmailStats(userId)
       ]);
 
-      const activeDelegations = tasks.filter(t =>
+      const activeDelegations = tasks.filter((t: any) =>
         ['assigned', 'in_progress'].includes(t.status || '')
       );
 
@@ -698,6 +708,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching orchestrator brief:", error);
       res.status(500).json({ message: "Failed to fetch daily brief" });
+    }
+  });
+
+  // Flash Questions Endpoints
+  app.get('/api/flash-questions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const emails = await storage.getEmails(userId);
+
+      // Generate questions from email patterns
+      const questions: any[] = [];
+
+      // Analyze frequent senders
+      const senderCounts: Record<string, number> = {};
+      emails.forEach(email => {
+        if (email.sender) {
+          senderCounts[email.sender] = (senderCounts[email.sender] || 0) + 1;
+        }
+      });
+
+      // Find top senders with 2+ emails (lowered for V1 low-data handling)
+      const frequentSenders = Object.entries(senderCounts)
+        .filter(([_, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+      for (const [sender, count] of frequentSenders) {
+        // Check if we already have a memory entry for this sender
+        const existingMemory = await storage.getOperationalMemory(userId, `sender_rule_${sender}`);
+        if (!existingMemory) {
+          questions.push({
+            id: `sender_${Buffer.from(sender).toString('base64').slice(0, 20)}`,
+            text: `You've received ${count} emails from "${sender}". Would you like a daily digest of these and auto-mark as read?`,
+            context: "This helps reduce inbox clutter from frequent senders",
+            type: "auto_rule",
+            metadata: { sender, count }
+          });
+        }
+      }
+
+      // Check for noreply patterns
+      const noreplyCount = emails.filter(e =>
+        e.sender?.includes('noreply') || e.sender?.includes('no-reply')
+      ).length;
+
+      if (noreplyCount >= 1) {
+        const existingRule = await storage.getOperationalMemory(userId, 'noreply_fyi_rule');
+        if (!existingRule) {
+          questions.push({
+            id: 'noreply_fyi',
+            text: `Should emails from "noreply@" addresses default to FYI category?`,
+            context: `You have ${noreplyCount} emails from noreply addresses`,
+            type: "category_confirm",
+            metadata: { count: noreplyCount }
+          });
+        }
+      }
+
+      // Check for potential contacts to identify
+      const draftEmails = emails.filter(e => e.category === 'Draft').slice(0, 5);
+      for (const email of draftEmails) {
+        if (email.sender) {
+          const senderName = email.sender.split('@')[0].replace(/[._]/g, ' ');
+          const existingContact = await storage.getOperationalMemory(userId, `contact_${email.sender}`);
+          if (!existingContact) {
+            questions.push({
+              id: `contact_${email.id}`,
+              text: `Is "${senderName}" someone you work with regularly?`,
+              context: `Donna can prioritize and draft better replies if she knows your key contacts`,
+              type: "contact_role",
+              metadata: { sender: email.sender, emailId: email.id }
+            });
+            break; // Only ask one contact question at a time
+          }
+        }
+      }
+
+      res.json(questions.slice(0, 5)); // Max 5 questions at a time
+    } catch (error) {
+      console.error("Error fetching flash questions:", error);
+      res.status(500).json({ message: "Failed to fetch questions" });
+    }
+  });
+
+  app.post('/api/flash-questions/:questionId/answer', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { questionId } = req.params;
+      const { answer } = req.body; // 'yes' | 'no' | 'skip'
+
+      if (answer === 'skip') {
+        return res.json({ message: "Question skipped" });
+      }
+
+      // Store the answer in operational memory
+      let memoryKey = '';
+      let memoryValue: any = { answer, answeredAt: new Date().toISOString() };
+
+      if (questionId.startsWith('sender_')) {
+        memoryKey = `sender_rule_answered_${questionId}`;
+        if (answer === 'yes') {
+          memoryValue.action = 'daily_digest';
+        }
+      } else if (questionId === 'noreply_fyi') {
+        memoryKey = 'noreply_fyi_rule';
+        memoryValue.enabled = answer === 'yes';
+      } else if (questionId.startsWith('contact_')) {
+        memoryKey = `contact_known_${questionId}`;
+        memoryValue.isKeyContact = answer === 'yes';
+      }
+
+      if (memoryKey) {
+        await storage.upsertOperationalMemory(userId, memoryKey, memoryValue);
+        await storage.createAuditLog(userId, "Flash Question Answered", `User answered "${answer}" to question ${questionId}`);
+      }
+
+      res.json({
+        message: answer === 'yes'
+          ? "Great! Donna will remember this preference."
+          : "Understood. Donna won't apply this rule.",
+        learned: true
+      });
+    } catch (error) {
+      console.error("Error answering flash question:", error);
+      res.status(500).json({ message: "Failed to save answer" });
     }
   });
 
