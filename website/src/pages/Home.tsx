@@ -2,54 +2,73 @@ import { motion } from 'framer-motion'
 import { Link } from 'wouter'
 
 const Hero = () => (
-    <section className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 text-center">
+    <section className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col items-center gap-8 max-w-4xl mx-auto"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
         >
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-                Your inbox, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">handled.</span>
-            </h1>
-            <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-                Donna AI turns email threads into clear tasks, drafts replies in your voice, and keeps context—so you can move faster without dropping balls.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-4">
-                <button className="h-14 px-8 rounded-full bg-primary hover:bg-primary-dark text-white font-bold text-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 transform hover:-translate-y-1">
-                    Join the beta
-                </button>
-                <Link href="/product">
-                    <button className="h-14 px-8 rounded-full bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white font-bold text-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-                        See how it works
+            <div className="flex flex-col gap-6 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
+                    <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+                        Email-first V1 • No complex setup • Designed for busy people
+                    </span>
+                </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight text-slate-900 dark:text-white">
+                    Your inbox, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">handled.</span>
+                </h1>
+                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg">
+                    Donna AI turns email threads into clear tasks, drafts replies in your voice, and keeps context—so you can move faster without dropping balls.
+                </p>
+                <div className="flex flex-wrap gap-4 pt-2">
+                    <button className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold text-base transition-all flex items-center gap-2 shadow-lg shadow-primary/25">
+                        Join the beta
                     </button>
-                </Link>
+                    <Link href="/product">
+                        <button className="h-12 px-6 rounded-lg bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white font-bold text-base hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                            See how it works
+                        </button>
+                    </Link>
+                </div>
             </div>
-
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wide pt-8">
-                Email-first V1 • No complex setup • Designed for busy people
-            </p>
+            <div className="relative w-full aspect-square lg:aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-border-dark">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background-dark to-background-dark opacity-50 z-10"></div>
+                <div className="w-full h-full bg-cover bg-center" aria-hidden="true"></div>
+                <div className="absolute bottom-8 left-8 right-8 bg-white/10 dark:bg-black/40 backdrop-blur-xl border border-white/20 p-6 rounded-xl z-20 shadow-xl">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                            <span className="material-symbols-outlined text-white">smart_toy</span>
+                        </div>
+                        <div className="space-y-2 w-full">
+                            <div className="h-2.5 w-1/3 bg-white/20 rounded"></div>
+                            <div className="h-2.5 w-3/4 bg-white/10 rounded"></div>
+                            <div className="h-2.5 w-1/2 bg-white/10 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </motion.div>
     </section>
 )
 
 const ProblemOutcome = () => (
-    <section className="w-full bg-slate-50 dark:bg-card-dark/30 border-y border-slate-200 dark:border-border-dark py-24">
+    <section className="w-full bg-slate-50 dark:bg-card-dark/30 border-y border-slate-200 dark:border-border-dark py-20">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-12">
                 Email isn’t work. <span className="text-slate-400">It’s where work arrives.</span>
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                     { icon: "filter_list", title: "Extract tasks", desc: "Turns conversations into clear to-dos." },
                     { icon: "summarize", title: "Summarise threads", desc: "Turns long chains into 'what matters'." },
                     { icon: "edit_note", title: "Draft replies", desc: "Uses context you already have." },
                     { icon: "assignment_turned_in", title: "Track commitments", desc: "Ensures nothing slips through cracks." }
                 ].map((item, i) => (
-                    <div key={i} className="flex flex-col items-center gap-4 p-6 rounded-2xl bg-white dark:bg-card-dark border border-slate-100 dark:border-border-dark shadow-sm">
-                        <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <div key={i} className="flex flex-col items-center gap-4 p-6 rounded-2xl bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark shadow-sm">
+                        <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span className="material-symbols-outlined text-2xl">{item.icon}</span>
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">{item.title}</h3>

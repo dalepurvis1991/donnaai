@@ -32,6 +32,12 @@ body {
   display: inline-block;
 }
 
+.glass-panel {
+  background: rgba(26, 31, 46, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
